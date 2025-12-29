@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO Meta Tags - Español -->
+    <meta name="description" content="Lumo la luz en todos tus viajes. Plataforma de transporte confiable y segura." />
+    <meta name="keywords" content="lumo, transporte, viajes, taxi, conductor, pasajero, movilidad" />
+    
+    <!-- SEO Meta Tags - English -->
+    <meta name="description" lang="en" content="Lumo the light in all your trips. Reliable and secure transportation platform." />
+    <meta name="keywords" lang="en" content="lumo, transportation, trips, taxi, driver, passenger, mobility" />
+    
+    <!-- SEO Meta Tags - Português -->
+    <meta name="description" lang="pt" content="Lumo a luz em todas as suas viagens. Plataforma de transporte confiável e segura." />
+    <meta name="keywords" lang="pt" content="lumo, transporte, viagens, táxi, motorista, passageiro, mobilidade" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lumo - La luz en todos tus viajes" />
+    <meta property="og:description" content="Lumo la luz en todos tus viajes. Plataforma de transporte confiable y segura." />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Lumo - La luz en todos tus viajes" />
+    <meta property="twitter:description" content="Lumo la luz en todos tus viajes. Plataforma de transporte confiable y segura." />
+    
+    <meta name="theme-color" content="#000000" />
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Lumo" />
+    
+    <!-- Iconos iOS -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    
+    <title>Lumo - La luz en todos tus viajes</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Registrar Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registrado:', reg))
+            .catch(err => console.log('Error SW:', err))
+        })
+      }
+    </script>
+  </body>
+</html>

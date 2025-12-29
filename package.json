@@ -1,0 +1,38 @@
+{
+  "name": "lumo-app",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "yarn workspace backend dev",
+    "dev:frontend": "yarn workspace frontend dev",
+    "build:backend": "yarn workspace backend build",
+    "build:frontend": "yarn workspace frontend build",
+    "docker:up": "cd docker && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "docker:down": "cd docker && docker compose -f docker-compose.yml -f docker-compose.prod.yml down",
+    "docker:logs": "cd docker && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f"
+  },
+  "packageManager": "yarn@1.22.19",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

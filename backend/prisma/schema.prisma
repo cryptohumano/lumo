@@ -1,0 +1,938 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String                   @id @default(uuid())
+  email                   String                   @unique
+  name                    String
+  phone                   String?
+  password                String?
+  role                    UserRole                 @default(PASSENGER) // Rol principal (para compatibilidad)
+  activeRole              UserRole? // Rol activo actual (para cambio de rol)
+  preferredCurrency       Currency                 @default(CLP)
+  country                 String?                  @default("CL")
+  isActive                Boolean                  @default(true)
+  isVerified              Boolean                  @default(false)
+  isEmailVerified         Boolean                  @default(false)
+  isRootAdmin             Boolean                  @default(false)
+  avatar                  String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  accounts                Account[]
+  experiences             Experience[]
+  interactions            Interaction[]
+  locations               Location[]
+  notificationPreferences NotificationPreference[]
+  notifications           Notification[]
+  payments                Payment[]
+  reservations            Reservation[]
+  receivedReviews         Review[]                 @relation("ReviewedUser")
+  reviews                 Review[]                 @relation("Reviewer")
+  tokens                  Token[]
+  driverTrips             Trip[]                   @relation("DriverTrips")
+  trips                   Trip[]                   @relation("PassengerTrips")
+  vehicles                Vehicle[]
+  whatsappNumbers         WhatsAppNumber[]
+  driverAlerts            DriverAlert[]            @relation("DriverAlerts")
+  userRoles               UserRoleAssignment[] // Roles adicionales
+  driverOnboarding        DriverOnboarding?
+  profiles                UserProfile[] // Perfiles por rol
+
+  @@index([email])
+  @@index([role])
+  @@index([activeRole])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(uuid())
+  userId    String
+  role      UserRole
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
+  @@map("user_role_assignments")
+}
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String
+  role        UserRole // Perfil específico para este rol
+  displayName String? // Nombre a mostrar cuando está en este rol
+  bio         String? // Biografía específica del rol
+  avatar      String? // Avatar específico del rol
+  metadata    Json? // Datos adicionales específicos del rol (ej: licencia de conducir para DRIVER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
+  @@index([isActive])
+  @@map("user_profiles")
+}
+
+model Account {
+  id                String       @id @default(uuid())
+  userId            String
+  provider          AuthProvider
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  tokenType         String?
+  scope             String?
+  idToken           String?
+  metadata          Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([provider])
+  @@index([providerAccountId])
+  @@map("accounts")
+}
+
+model Token {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  type      TokenType
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([type])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("tokens")
+}
+
+model WhatsAppNumber {
+  id           String        @id @default(uuid())
+  userId       String
+  phoneNumber  String        @unique
+  name         String?
+  isActive     Boolean       @default(true)
+  isPrimary    Boolean       @default(false)
+  metadata     Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  interactions Interaction[]
+  reservations Reservation[]
+  trips        Trip[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([isActive])
+  @@map("whatsapp_numbers")
+}
+
+model Interaction {
+  id               String               @id @default(uuid())
+  whatsappNumberId String
+  userId           String?
+  tripId           String?
+  experienceId     String?
+  reservationId    String?
+  type             InteractionType
+  direction        InteractionDirection
+  messageId        String?
+  phoneNumber      String
+  message          String
+  status           InteractionStatus    @default(PENDING)
+  metadata         Json?
+  errorMessage     String?
+  sentAt           DateTime?
+  receivedAt       DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  experience       Experience?          @relation(fields: [experienceId], references: [id])
+  reservation      Reservation?         @relation(fields: [reservationId], references: [id])
+  trip             Trip?                @relation(fields: [tripId], references: [id])
+  user             User?                @relation(fields: [userId], references: [id])
+  whatsappNumber   WhatsAppNumber       @relation(fields: [whatsappNumberId], references: [id], onDelete: Cascade)
+
+  @@index([whatsappNumberId])
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("interactions")
+}
+
+model Vehicle {
+  id              String                @id @default(uuid())
+  userId          String
+  make            String
+  model           String
+  year            Int
+  color           String?
+  licensePlate    String                @unique
+  type            VehicleType
+  capacity        Int
+  isAvailable     Boolean               @default(true)
+  isVerified      Boolean               @default(false)
+  approvalStatus  VehicleApprovalStatus @default(PENDING)
+  approvedAt      DateTime?
+  approvedBy      String?
+  rejectionReason String?
+  photos          String[]
+  metadata        Json?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  experiences     Experience[]
+  trips           Trip[]
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  onboarding      DriverOnboarding?
+
+  @@index([userId])
+  @@index([licensePlate])
+  @@index([type])
+  @@index([isAvailable])
+  @@index([approvalStatus])
+  @@map("vehicles")
+}
+
+model Place {
+  id                    String       @id @default(uuid())
+  placeId               String       @unique
+  formattedAddress      String
+  name                  String?
+  latitude              Float
+  longitude             Float
+  types                 String[]
+  city                  String?
+  country               String?
+  region                String?
+  postalCode            String?
+  metadata              Json?
+  lastFetched           DateTime     @default(now())
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  experienceEndPlaces   Experience[] @relation("ExperienceEndPlace")
+  experienceStartPlaces Experience[] @relation("ExperienceStartPlace")
+  locations             Location[]
+  destinationRoutes     Route[]      @relation("DestinationRoute")
+  originRoutes          Route[]      @relation("OriginRoute")
+  destinationTrips      Trip[]       @relation("DestinationPlace")
+  originTrips           Trip[]       @relation("OriginPlace")
+
+  @@index([placeId])
+  @@index([latitude, longitude])
+  @@index([formattedAddress])
+  @@index([lastFetched])
+  @@map("places")
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  userId    String?
+  placeId   String?
+  name      String
+  address   String
+  city      String?
+  country   String?
+  latitude  Float
+  longitude Float
+  isDefault Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  place     Place?   @relation(fields: [placeId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([placeId])
+  @@index([latitude, longitude])
+  @@map("locations")
+}
+
+model Route {
+  id                 String   @id @default(uuid())
+  originPlaceId      String
+  destinationPlaceId String
+  travelMode         String
+  distance           Float
+  duration           Int
+  distanceText       String
+  durationText       String
+  polyline           String?
+  bounds             Json?
+  waypoints          Json?
+  metadata           Json?
+  lastCalculated     DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  destinationPlace   Place    @relation("DestinationRoute", fields: [destinationPlaceId], references: [id], onDelete: Cascade)
+  originPlace        Place    @relation("OriginRoute", fields: [originPlaceId], references: [id], onDelete: Cascade)
+  trips              Trip[]
+
+  @@unique([originPlaceId, destinationPlaceId, travelMode])
+  @@index([originPlaceId])
+  @@index([destinationPlaceId])
+  @@index([travelMode])
+  @@index([lastCalculated])
+  @@map("routes")
+}
+
+model Trip {
+  id                   String          @id @default(uuid())
+  tripNumber           String          @unique
+  passengerId          String?
+  driverId             String?
+  vehicleId            String?
+  whatsappNumberId     String?
+  originAddress        String
+  originLatitude       Float
+  originLongitude      Float
+  destinationAddress   String
+  destinationLatitude  Float
+  destinationLongitude Float
+  originPlaceId        String?
+  destinationPlaceId   String?
+  routeId              String?
+  distance             Float
+  duration             Int
+  distanceText         String
+  durationText         String
+  passengers           Int             @default(1)
+  isRoundTrip          Boolean         @default(false)
+  returnScheduledAt    DateTime?
+  preferredVehicleType VehicleType?
+  routePolyline        String?
+  routeBounds          Json?
+  basePrice            Float
+  distancePrice        Float
+  timePrice            Float
+  totalPrice           Float
+  currency             String          @default("CLP")
+  scheduledAt          DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  driverRequestedAt    DateTime?
+  acceptanceDeadline   DateTime?
+  driverAcceptedAt     DateTime?
+  driverRejectedAt     DateTime?
+  startPin             String?
+  startPinExpiresAt    DateTime?
+  startQrCode          String?
+  status               TripStatus      @default(PENDING)
+  notes                String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  interactions         Interaction[]
+  payments             Payment[]
+  reviews              Review[]
+  destinationPlace     Place?          @relation("DestinationPlace", fields: [destinationPlaceId], references: [id])
+  driver               User?           @relation("DriverTrips", fields: [driverId], references: [id])
+  originPlace          Place?          @relation("OriginPlace", fields: [originPlaceId], references: [id])
+  passenger            User?           @relation("PassengerTrips", fields: [passengerId], references: [id])
+  route                Route?          @relation(fields: [routeId], references: [id])
+  vehicle              Vehicle?        @relation(fields: [vehicleId], references: [id])
+  whatsappNumber       WhatsAppNumber? @relation(fields: [whatsappNumberId], references: [id])
+  driverAlerts         DriverAlert[]   @relation("TripAlerts")
+
+  @@index([passengerId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([originPlaceId])
+  @@index([destinationPlaceId])
+  @@index([routeId])
+  @@index([tripNumber])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@map("trips")
+}
+
+model Experience {
+  id               String           @id @default(uuid())
+  hostId           String
+  vehicleId        String?
+  title            String
+  description      String
+  shortDescription String?
+  durationDays     Int
+  durationHours    Int?
+  startLocation    Json
+  endLocation      Json?
+  waypoints        Json?
+  startPlaceId     String?
+  endPlaceId       String?
+  waypointPlaceIds String[]
+  basePrice        Float
+  pricePerPerson   Float?
+  currency         String           @default("CLP")
+  includes         String[]
+  status           ExperienceStatus @default(DRAFT)
+  maxParticipants  Int              @default(4)
+  minParticipants  Int              @default(1)
+  photos           String[]
+  itinerary        Json?
+  tags             String[]
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  endPlace         Place?           @relation("ExperienceEndPlace", fields: [endPlaceId], references: [id])
+  host             User             @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  startPlace       Place?           @relation("ExperienceStartPlace", fields: [startPlaceId], references: [id])
+  vehicle          Vehicle?         @relation(fields: [vehicleId], references: [id])
+  interactions     Interaction[]
+  reservations     Reservation[]
+  reviews          Review[]
+
+  @@index([hostId])
+  @@index([vehicleId])
+  @@index([startPlaceId])
+  @@index([endPlaceId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([title])
+  @@map("experiences")
+}
+
+model Reservation {
+  id               String            @id @default(uuid())
+  experienceId     String
+  passengerId      String
+  whatsappNumberId String?
+  startDate        DateTime
+  endDate          DateTime
+  participants     Int               @default(1)
+  basePrice        Float
+  totalPrice       Float
+  currency         String            @default("CLP")
+  status           ReservationStatus @default(PENDING)
+  notes            String?
+  passengerName    String
+  passengerPhone   String
+  passengerEmail   String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  interactions     Interaction[]
+  payments         Payment[]
+  experience       Experience        @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  passenger        User              @relation(fields: [passengerId], references: [id], onDelete: Cascade)
+  whatsappNumber   WhatsAppNumber?   @relation(fields: [whatsappNumberId], references: [id])
+  reviews          Review[]
+
+  @@index([experienceId])
+  @@index([passengerId])
+  @@index([status])
+  @@index([startDate])
+  @@index([createdAt])
+  @@map("reservations")
+}
+
+model Payment {
+  id                   String        @id @default(uuid())
+  userId               String?
+  tripId               String?
+  reservationId        String?
+  amount               Float
+  currency             String        @default("CLP")
+  fee                  Float         @default(0)
+  netAmount            Float
+  method               PaymentMethod
+  paymentMethodDetails Json?
+  status               PaymentStatus @default(PENDING)
+  transactionId        String?
+  failureReason        String?
+  processedAt          DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  reservation          Reservation?  @relation(fields: [reservationId], references: [id])
+  trip                 Trip?         @relation(fields: [tripId], references: [id])
+  user                 User?         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([reservationId])
+  @@index([status])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+model Review {
+  id             String       @id @default(uuid())
+  reviewerId     String
+  reviewedUserId String
+  tripId         String?
+  experienceId   String?
+  reservationId  String?
+  rating         Int
+  title          String?
+  comment        String?
+  status         ReviewStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  experience     Experience?  @relation(fields: [experienceId], references: [id])
+  reservation    Reservation? @relation(fields: [reservationId], references: [id])
+  reviewedUser   User         @relation("ReviewedUser", fields: [reviewedUserId], references: [id], onDelete: Cascade)
+  reviewer       User         @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  trip           Trip?        @relation(fields: [tripId], references: [id])
+
+  @@index([reviewerId])
+  @@index([reviewedUserId])
+  @@index([tripId])
+  @@index([experienceId])
+  @@index([reservationId])
+  @@index([rating])
+  @@index([status])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+model Notification {
+  id          String                @id @default(uuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String
+  data        Json?
+  priority    NotificationPriority  @default(NORMAL)
+  status      NotificationStatus    @default(UNREAD)
+  channels    NotificationChannel[]
+  readAt      DateTime?
+  archivedAt  DateTime?
+  expiresAt   DateTime?
+  actionUrl   String?
+  actionLabel String?
+  metadata    Json?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id        String              @id @default(uuid())
+  userId    String
+  type      NotificationType
+  channel   NotificationChannel
+  enabled   Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, channel])
+  @@index([userId])
+  @@index([type])
+  @@index([channel])
+  @@map("notification_preferences")
+}
+
+model DriverAlert {
+  id         String            @id @default(uuid())
+  driverId   String
+  tripId     String
+  status     DriverAlertStatus @default(PENDING)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  rejectedAt DateTime?
+  viewedAt   DateTime?
+  metadata   Json?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  driver     User              @relation("DriverAlerts", fields: [driverId], references: [id], onDelete: Cascade)
+  trip       Trip              @relation("TripAlerts", fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([driverId, tripId, status])
+  @@index([driverId])
+  @@index([tripId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("driver_alerts")
+}
+
+enum UserRole {
+  PASSENGER
+  DRIVER
+  HOST
+  DISPATCHER
+  SUPPORT
+  MODERATOR
+  ADMIN
+  OPERATOR
+}
+
+enum Currency {
+  CLP
+  MXN
+  USD
+  ARS
+  COP
+  BRL
+  BOB
+  PEN
+  CAD
+}
+
+enum TokenType {
+  REFRESH_TOKEN
+  API_KEY
+  WHATSAPP_WEBHOOK
+}
+
+enum InteractionType {
+  TRIP_REQUEST
+  TRIP_CONFIRMATION
+  TRIP_CANCELLATION
+  EXPERIENCE_REQUEST
+  EXPERIENCE_CONFIRMATION
+  MESSAGE
+  NOTIFICATION
+}
+
+enum InteractionDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum InteractionStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum TripStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ExperienceStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum VehicleType {
+  SEDAN
+  SUV
+  VAN
+  PICKUP
+  OFF_ROAD
+  LUXURY
+  MOTORCYCLE
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  CASH
+  DIGITAL_WALLET
+  OTHER
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+enum NotificationType {
+  TRIP_CREATED
+  TRIP_AVAILABLE
+  TRIP_ASSIGNED
+  TRIP_ACCEPTED
+  TRIP_REJECTED
+  TRIP_CANCELLED
+  TRIP_IN_PROGRESS
+  TRIP_COMPLETED
+  TRIP_DRIVER_ARRIVED
+  TRIP_REASSIGNED
+  EXPERIENCE_CREATED
+  RESERVATION_CREATED
+  RESERVATION_CONFIRMED
+  RESERVATION_CANCELLED
+  RESERVATION_IN_PROGRESS
+  RESERVATION_COMPLETED
+  EXPERIENCE_REMINDER
+  PAYMENT_PENDING
+  PAYMENT_PROCESSING
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  PAYMENT_REFUNDED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
+  REVIEW_PENDING
+  REVIEW_APPROVED
+  REVIEW_REJECTED
+  REVIEW_REPORTED
+  VEHICLE_VERIFIED
+  VEHICLE_REJECTED
+  VEHICLE_EXPIRING
+  PROFILE_UPDATED
+  EMAIL_VERIFIED
+  ACCOUNT_LINKED
+  ACCOUNT_UNLINKED
+  PASSWORD_CHANGED
+  LOGIN_NEW_DEVICE
+  LOGIN_SUSPICIOUS
+  SUPPORT_TICKET_CREATED
+  SUPPORT_TICKET_UPDATED
+  SUPPORT_TICKET_RESOLVED
+  REFUND_REQUESTED
+  REFUND_APPROVED
+  REFUND_REJECTED
+  CONTENT_REPORTED
+  USER_SUSPENDED
+  USER_VERIFIED
+  USER_REJECTED
+  ROLE_CHANGED
+  ROLE_ASSIGNED
+  DRIVER_ONBOARDING_APPROVED
+  DRIVER_ONBOARDING_REJECTED
+  TRIP_UNASSIGNED
+  DRIVER_UNAVAILABLE
+  HIGH_DEMAND
+  SYSTEM_ALERT
+  SYSTEM_MAINTENANCE
+  SYSTEM_UPDATE
+  NEW_FEATURE
+  SECURITY_ALERT
+  PERFORMANCE_ALERT
+  PROMOTION
+  ANNOUNCEMENT
+  WELCOME
+  REMINDER
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+  SMS
+  WHATSAPP
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+  DELETED
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  FACEBOOK
+  APPLE
+}
+
+enum DriverAlertStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum VehicleApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DriverOnboarding {
+  id          String                 @id @default(uuid())
+  userId      String                 @unique
+  status      DriverOnboardingStatus @default(NOT_STARTED)
+  currentStep Int                    @default(0)
+  totalSteps  Int                    @default(5)
+
+  // Información personal
+  fullName    String?
+  dateOfBirth DateTime?
+  nationalId  String?
+  address     String?
+  city        String?
+  country     String?
+
+  // Tipo de conductor (independiente o empresa)
+  driverType DriverType @default(INDEPENDENT)
+
+  // Información de empresa (si aplica)
+  companyName    String?
+  companyTaxId   String?
+  companyAddress String?
+  companyCity    String?
+  companyCountry String?
+
+  // Referente fiscal (adaptado por país)
+  // Chile: RUT, Argentina: CUIT, México: RFC, Brasil: CPF/CNPJ, etc.
+  taxId     String?
+  taxIdType TaxIdType?
+
+  // Información de licencia
+  licenseNumber     String?
+  licenseExpiryDate DateTime?
+  licenseIssuedBy   String?
+
+  // Información bancaria (KYB)
+  bankName      String?
+  accountNumber String?
+  accountType   String?
+  routingNumber String?
+  bankCountry   String?
+
+  // Documentos
+  documents DriverDocument[]
+
+  // Vehículo (relación con el primer vehículo registrado durante onboarding)
+  vehicleId String? @unique
+
+  // Revisión y aprobación
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+
+  // Metadata
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([currentStep])
+  @@map("driver_onboarding")
+}
+
+model DriverDocument {
+  id              String             @id @default(uuid())
+  onboardingId    String
+  type            DriverDocumentType
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  mimeType        String?
+  status          DocumentStatus     @default(PENDING)
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectionReason String?
+  metadata        Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  onboarding      DriverOnboarding   @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@index([onboardingId])
+  @@index([type])
+  @@index([status])
+  @@map("driver_documents")
+}
+
+enum DriverOnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum DriverDocumentType {
+  NATIONAL_ID_FRONT
+  NATIONAL_ID_BACK
+  DRIVER_LICENSE_FRONT
+  DRIVER_LICENSE_BACK
+  PROOF_OF_ADDRESS
+  BANK_STATEMENT
+  VEHICLE_REGISTRATION
+  VEHICLE_INSURANCE
+  CRIMINAL_RECORD
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum DriverType {
+  INDEPENDENT
+  COMPANY
+}
+
+enum TaxIdType {
+  RUT // Chile
+  CUIT // Argentina
+  RFC // México
+  CPF // Brasil (persona física)
+  CNPJ // Brasil (empresa)
+  NIT // Colombia
+  RUC // Perú
+  NIT_BOL // Bolivia
+  SIN // Canadá
+  EIN // Estados Unidos
+  OTHER
+}
