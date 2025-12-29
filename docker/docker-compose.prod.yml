@@ -1,0 +1,27 @@
+# Override para producción
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    build:
+      target: runner
+    environment:
+      NODE_ENV: production
+    # No exponer puertos en producción, solo acceso interno
+
+  frontend:
+    build:
+      target: production
+    # No exponer puertos en producción, solo acceso interno
+
+  postgres:
+    # En producción, exponer en puerto diferente al de desarrollo
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+
+  minio:
+    # En producción, usar puertos diferentes al de desarrollo
+    # Solo exponer el puerto de consola si es necesario para administración
+    ports:
+      - "${MINIO_PORT:-9010}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Icons</title>
+</head>
+<body>
+  <canvas id="canvas192" width="192" height="192"></canvas>
+  <canvas id="canvas512" width="512" height="512"></canvas>
+  <script>
+    function createIcon(size, filename) {
+      const canvas = document.getElementById('canvas' + size);
+      const ctx = canvas.getContext('2d');
+      
+      // Fondo negro
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Cuadrado blanco
+      const margin = size * 0.1;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(margin, margin, size - margin * 2, size - margin * 2);
+      
+      // Texto
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${size * 0.3}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('OPS', size / 2, size / 2);
+      
+      // Descargar
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+    
+    createIcon(192, 'icon-192.png');
+    createIcon(512, 'icon-512.png');
+  </script>
+</body>
+</html>

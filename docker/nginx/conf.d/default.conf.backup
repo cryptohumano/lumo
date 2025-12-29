@@ -1,0 +1,118 @@
+# Configuración principal del sitio
+# HTTP - Redirección a HTTPS y Let's Encrypt
+server {
+    listen 80;
+    listen [::]:80;
+    server_name transportesedimburgo.com www.transportesedimburgo.com;
+
+    # Para Let's Encrypt
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Servir el website
+    # En desarrollo: website corre en puerto 5173 (vite dev server)
+    # En producción: website corre en puerto 80 (nginx interno)
+    location / {
+        # Redirección a HTTPS (descomentar después de obtener certificados)
+        # return 301 https://$host$request_uri;
+        
+        # Proxy al website - detectar si es desarrollo o producción
+        # Intentar primero puerto 5173 (desarrollo), si falla usar 80 (producción)
+        set $website_backend "http://website:5173";
+        
+        # En producción, usar puerto 80
+        # proxy_pass http://website:80;
+        
+        # Por ahora, usar desarrollo (5173)
+        proxy_pass http://website:5173;
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Timeouts para desarrollo
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # API routing
+    location /api/ {
+        proxy_pass http://backend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# API Backend - Proxy
+server {
+    listen 80;
+    server_name api.transportesedimburgo.com;
+
+    location / {
+        proxy_pass http://backend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# Configuración HTTPS (comentada hasta obtener certificados)
+# Descomentar después de ejecutar ./init-letsencrypt.sh
+# server {
+#     listen 443 ssl http2;
+#     listen [::]:443 ssl http2;
+#     server_name transportesedimburgo.com www.transportesedimburgo.com;
+# 
+#     ssl_certificate /etc/letsencrypt/live/transportesedimburgo.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/transportesedimburgo.com/privkey.pem;
+# 
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+#     ssl_prefer_server_ciphers off;
+#     ssl_session_cache shared:SSL:10m;
+#     ssl_session_timeout 10m;
+# 
+#     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+# 
+#     location / {
+#         # En desarrollo: usar puerto 5173, en producción: puerto 80
+#         proxy_pass http://website:5173;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection "upgrade";
+#     }
+# 
+#     location /api/ {
+#         proxy_pass http://backend:3000;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection 'upgrade';
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_cache_bypass $http_upgrade;
+#     }
+# }
+
