@@ -18,7 +18,6 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react/jsx-runtime', 'html5-qrcode'],
     exclude: [],
-    force: true, // Forzar reoptimización en el próximo inicio
   },
   server: {
     port: 5174, // Puerto diferente a website (5173)
@@ -32,6 +31,10 @@ export default defineConfig({
     },
   },
   build: {
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         manualChunks: undefined,

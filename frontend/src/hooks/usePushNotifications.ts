@@ -10,7 +10,12 @@ import {
 } from '@/services/pushNotificationService'
 
 export function usePushNotifications() {
-  const { user } = useAuth()
+  // Obtener el contexto de auth - debe estar disponible porque AppContent
+  // está dentro de AuthProvider. Si no está disponible, el hook simplemente
+  // no inicializará las notificaciones.
+  const authContext = useAuth()
+  const user = authContext?.user || null
+
   const [isSupported, setIsSupported] = useState(false)
   const [isEnabled, setIsEnabled] = useState(false)
   const [isLoading, setIsLoading] = useState(true)

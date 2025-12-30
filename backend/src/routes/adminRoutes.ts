@@ -767,5 +767,93 @@ router.post('/vehicles/:id/reject', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/admin/config/polkadot
+ * Obtiene las configuraciones de Polkadot
+ */
+router.get('/config/polkadot', async (req, res) => {
+  try {
+    const { getSystemConfigService } = await import('../services/systemConfigService')
+    const systemConfig = getSystemConfigService()
+    const configs = await systemConfig.getPolkadotConfigs()
+    
+    res.json({
+      network: configs.network,
+      paymentChain: configs.paymentChain,
+      paymentPreset: configs.paymentPreset,
+      paymentCustom: configs.paymentCustom,
+      assetUsdtId: configs.usdtAssetId,
+      assetUsdcId: configs.usdcAssetId,
+      platformAddress: configs.platformAddress,
+      platformFeePercentage: configs.platformFeePercentage ? parseFloat(configs.platformFeePercentage) : null,
+    })
+  } catch (error: any) {
+    console.error('Error obteniendo configuraciones de Polkadot:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message || 'Error al obtener configuraciones',
+    })
+  }
+})
+
+/**
+ * PUT /api/admin/config/polkadot
+ * Actualiza las configuraciones de Polkadot
+ */
+router.put('/config/polkadot', async (req, res) => {
+  try {
+    const {
+      network,
+      paymentChain,
+      paymentPreset,
+      paymentCustom,
+      assetUsdtId,
+      assetUsdcId,
+      platformAddress,
+      platformFeePercentage,
+    } = req.body
+    
+    const userId = req.user!.id
+    const { getSystemConfigService } = await import('../services/systemConfigService')
+    const systemConfig = getSystemConfigService()
+    
+    await systemConfig.setPolkadotConfigs(
+      {
+        network,
+        paymentChain,
+        paymentPreset,
+        paymentCustom,
+        usdtAssetId: assetUsdtId,
+        usdcAssetId: assetUsdcId,
+        platformAddress,
+        platformFeePercentage,
+      },
+      userId
+    )
+    
+    const updatedConfigs = await systemConfig.getPolkadotConfigs()
+    
+    res.json({
+      message: 'Configuraciones de Polkadot actualizadas correctamente',
+      configs: {
+        network: updatedConfigs.network,
+        paymentChain: updatedConfigs.paymentChain,
+        paymentPreset: updatedConfigs.paymentPreset,
+        paymentCustom: updatedConfigs.paymentCustom,
+        assetUsdtId: updatedConfigs.usdtAssetId,
+        assetUsdcId: updatedConfigs.usdcAssetId,
+        platformAddress: updatedConfigs.platformAddress,
+        platformFeePercentage: updatedConfigs.platformFeePercentage ? parseFloat(updatedConfigs.platformFeePercentage) : null,
+      },
+    })
+  } catch (error: any) {
+    console.error('Error actualizando configuraciones de Polkadot:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message || 'Error al actualizar configuraciones',
+    })
+  }
+})
+
 export default router
 

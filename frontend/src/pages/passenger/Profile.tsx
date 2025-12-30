@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
-import { UserCircle, Save, ArrowLeft, Mail, Phone, MapPin } from 'lucide-react'
+import { UserCircle, Save, ArrowLeft, Mail, Phone, MapPin, Wallet, CheckCircle2, XCircle } from 'lucide-react'
 import { api } from '@/services/api'
 import { getCountryName } from '@/services/locationService'
+import { PeopleChainIdentity } from '@/components/polkadot/PeopleChainIdentity'
 
 export default function PassengerProfile() {
   const { t } = useTranslation()
@@ -40,8 +41,9 @@ export default function PassengerProfile() {
       if (user) {
         setFormData({
           displayName: user.name,
-        bio: '',
-      })
+          bio: '',
+        })
+      }
     } catch (error) {
       console.error('Error loading profile:', error)
     }
@@ -214,6 +216,58 @@ export default function PassengerProfile() {
               )}
             </CardContent>
           </Card>
+
+          {/* Información de Polkadot */}
+          {user.polkadotAddress && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  <CardTitle>{t('profile.polkadot.title') || 'Wallet de Polkadot'}</CardTitle>
+                </div>
+                <CardDescription>
+                  {t('profile.polkadot.description') || 'Tu wallet vinculada de Polkadot'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">{t('profile.polkadot.linked') || 'Wallet vinculada'}</span>
+                </div>
+                <div className="bg-muted p-3 rounded-lg space-y-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      {t('profile.polkadot.address') || 'Dirección'}
+                    </Label>
+                    <p className="font-mono text-sm break-all">
+                      {user.polkadotAddress}
+                    </p>
+                  </div>
+                  {user.polkadotChain && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        {t('profile.polkadot.chain') || 'Chain'}
+                      </Label>
+                      <p className="text-sm">{user.polkadotChain}</p>
+                    </div>
+                  )}
+                  {user.paymentAddress && user.paymentAddress !== user.polkadotAddress && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        {t('profile.polkadot.paymentAddress') || 'Dirección de pago'}
+                      </Label>
+                      <p className="font-mono text-sm break-all">
+                        {user.paymentAddress}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {user.polkadotAddress && (
+                  <PeopleChainIdentity address={user.polkadotAddress} />
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Botones de acción */}
           <div className="flex justify-end gap-4">

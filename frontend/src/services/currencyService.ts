@@ -28,20 +28,42 @@ export interface ExchangeRatesResponse {
 /**
  * Convierte un monto de una moneda a otra
  */
-// Helper para obtener la URL base de la API
+// Helper para obtener la URL base de la API (misma lógica que api.ts)
 function getApiBaseUrl(): string {
-  let apiUrl = import.meta.env.VITE_API_URL
-  if (!apiUrl || apiUrl === 'undefined') {
-    const hostname = window.location.hostname
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      apiUrl = 'http://localhost:3000/api'
-    } else {
-      apiUrl = `http://${hostname}:3000/api`
-    }
-  } else if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    apiUrl = apiUrl.replace('localhost', window.location.hostname)
+  const envUrl = import.meta.env.VITE_API_URL
+  const hostname = window.location.hostname
+  
+  // En desarrollo, siempre usar localhost:3000 si estamos en localhost
+  if (import.meta.env.DEV && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    return 'http://localhost:3000/api'
   }
-  return apiUrl
+  
+  // Si la URL contiene lumo.peranto.app pero estamos en desarrollo local, usar localhost
+  if (import.meta.env.DEV && envUrl && envUrl.includes('lumo.peranto.app') && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    return 'http://localhost:3000/api'
+  }
+  
+  if (envUrl && envUrl !== 'undefined') {
+    // Si la URL del env usa localhost pero estamos accediendo desde la red, usar la IP del servidor
+    if (envUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      const serverIP = hostname
+      return envUrl.replace('localhost', serverIP)
+    }
+    return envUrl
+  }
+  
+  // Fallback: detectar automáticamente
+  if (import.meta.env.DEV) {
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3000/api'
+    } else {
+      // Estamos en la red, usar la IP del servidor
+      return `http://${hostname}:3000/api`
+    }
+  }
+  
+  // Fallback para producción
+  return '/api'
 }
 
 export async function convertCurrency(
@@ -50,7 +72,11 @@ export async function convertCurrency(
   to: Currency | string
 ): Promise<CurrencyConversion> {
   try {
-    const baseUrl = getApiBaseUrl()
+    let baseUrl = getApiBaseUrl()
+    // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+    if (baseUrl.startsWith('https://')) {
+      baseUrl = baseUrl.replace('https://', 'http://')
+    }
     const response = await fetch(
       `${baseUrl}/currency/convert?amount=${amount}&from=${from}&to=${to}`
     )
@@ -83,7 +109,11 @@ export async function getExchangeRate(
   to: Currency | string
 ): Promise<number> {
   try {
-    const baseUrl = getApiBaseUrl()
+    let baseUrl = getApiBaseUrl()
+    // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+    if (baseUrl.startsWith('https://')) {
+      baseUrl = baseUrl.replace('https://', 'http://')
+    }
     const response = await fetch(
       `${baseUrl}/currency/rate?from=${from}&to=${to}`
     )

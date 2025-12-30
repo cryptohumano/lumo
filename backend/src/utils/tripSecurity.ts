@@ -66,6 +66,56 @@ export function validateStartQrCode(qrData: string, expectedTripId: string, expe
 }
 
 /**
+ * Genera un código QR para el pago
+ * El QR contiene: paymentId + timestamp
+ */
+export async function generatePaymentQrCode(paymentId: string): Promise<string> {
+  const qrData = JSON.stringify({
+    paymentId,
+    type: 'PAYMENT',
+    timestamp: Date.now(),
+  })
+  
+  // Generar QR como data URL (imagen base64)
+  const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    errorCorrectionLevel: 'M',
+    type: 'image/png',
+    width: 300,
+    margin: 1,
+  })
+  
+  return qrCodeDataUrl
+}
+
+/**
+ * Valida y decodifica un código QR de pago
+ */
+export function validatePaymentQrCode(qrData: string): { paymentId: string; valid: boolean } {
+  try {
+    const data = JSON.parse(qrData)
+    
+    // Verificar que el QR es válido
+    if (data.type !== 'PAYMENT') {
+      return { paymentId: '', valid: false }
+    }
+    if (!data.paymentId) {
+      return { paymentId: '', valid: false }
+    }
+    
+    // Verificar que el QR no sea muy antiguo (máximo 24 horas)
+    const qrAge = Date.now() - data.timestamp
+    const maxAge = 24 * 60 * 60 * 1000 // 24 horas
+    if (qrAge > maxAge) {
+      return { paymentId: '', valid: false }
+    }
+    
+    return { paymentId: data.paymentId, valid: true }
+  } catch (error) {
+    return { paymentId: '', valid: false }
+  }
+}
+
+/**
  * Calcula la distancia entre dos coordenadas (Haversine)
  * Retorna la distancia en metros
  */
@@ -107,4 +157,16 @@ export function isDriverNearOrigin(
   const distance = calculateDistance(driverLat, driverLon, originLat, originLon)
   return distance <= maxDistanceMeters
 }
+
+
+
+
+
+
+
+
+
+
+
+
 

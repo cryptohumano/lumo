@@ -308,7 +308,18 @@ router.put('/me', authenticate, async (req, res) => {
     const updateData: UpdateUserData = {}
     if (name !== undefined) updateData.name = name
     if (phone !== undefined) updateData.phone = phone
-    if (preferredCurrency !== undefined) updateData.preferredCurrency = preferredCurrency
+    // Validar que preferredCurrency sea un valor válido del enum Currency
+    if (preferredCurrency !== undefined && preferredCurrency !== '') {
+      const validCurrencies = ['CLP', 'MXN', 'USD', 'ARS', 'COP', 'BRL', 'BOB', 'PEN', 'CAD']
+      if (validCurrencies.includes(preferredCurrency)) {
+        updateData.preferredCurrency = preferredCurrency
+      } else {
+        return res.status(400).json({
+          error: 'Bad Request',
+          message: `Moneda inválida. Valores válidos: ${validCurrencies.join(', ')}`
+        })
+      }
+    }
     if (country !== undefined) updateData.country = country
     if (avatar !== undefined) updateData.avatar = avatar
 

@@ -20,6 +20,7 @@ import AdminTrips from '@/pages/admin/Trips'
 import AdminVehicles from '@/pages/admin/Vehicles'
 import AdminOnboarding from '@/pages/admin/Onboarding'
 import AdminProfile from '@/pages/admin/Profile'
+import AdminSystemConfig from '@/pages/admin/SystemConfig'
 import DriverDashboard from '@/pages/driver/Dashboard'
 import AvailableTrips from '@/pages/driver/AvailableTrips'
 import DriverTrips from '@/pages/driver/Trips'
@@ -34,6 +35,7 @@ import ModeratorProfile from '@/pages/moderator/Profile'
 import Settings from '@/pages/Settings'
 import Terms from '@/pages/Terms'
 import Privacy from '@/pages/Privacy'
+import ReportEmergency from '@/pages/ReportEmergency'
 import { DriverAlertManager } from '@/components/alerts/DriverAlertManager'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { InstallPWAButton } from '@/components/pwa/InstallPWAButton'
@@ -270,6 +272,15 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        {/* Ruta de Emergencias */}
+        <Route
+          path="report-emergency"
+          element={
+            <ProtectedRoute>
+              <ReportEmergency />
+            </ProtectedRoute>
+          }
+        />
         {/* Rutas de Administrador */}
         <Route path="admin">
           <Route 
@@ -325,6 +336,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="system-config" 
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminSystemConfig />
               </ProtectedRoute>
             } 
           />

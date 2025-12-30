@@ -94,20 +94,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Detectar automáticamente la URL del backend
       let apiUrl = import.meta.env.VITE_API_URL
-      if (!apiUrl || apiUrl === 'undefined') {
-        const hostname = window.location.hostname
+      const hostname = window.location.hostname
+      
+      // En desarrollo, siempre usar localhost:3000 si estamos en localhost
+      if (import.meta.env.DEV && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      } else if (!apiUrl || apiUrl === 'undefined') {
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
           apiUrl = 'http://localhost:3000/api'
         } else {
           // Estamos en la red, usar la IP del servidor
           apiUrl = `http://${hostname}:3000/api`
         }
-      } else if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      } else if (apiUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
         // Si el env tiene localhost pero estamos en la red, reemplazar
-        apiUrl = apiUrl.replace('localhost', window.location.hostname)
+        apiUrl = apiUrl.replace('localhost', hostname)
       }
       
-      console.log('Login - API URL:', apiUrl, 'Hostname:', window.location.hostname)
+      // Si la URL contiene lumo.peranto.app pero estamos en desarrollo local, usar localhost
+      if (import.meta.env.DEV && apiUrl.includes('lumo.peranto.app') && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      }
+      
+      // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+      if (apiUrl.startsWith('https://')) {
+        apiUrl = apiUrl.replace('https://', 'http://')
+      }
+      
+      console.log('Login - API URL:', apiUrl, 'Hostname:', hostname, 'DEV:', import.meta.env.DEV)
       
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
@@ -185,20 +199,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Detectar automáticamente la URL del backend
       let apiUrl = import.meta.env.VITE_API_URL
-      if (!apiUrl || apiUrl === 'undefined') {
-        const hostname = window.location.hostname
+      const hostname = window.location.hostname
+      
+      // En desarrollo, siempre usar localhost:3000 si estamos en localhost
+      if (import.meta.env.DEV && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      } else if (!apiUrl || apiUrl === 'undefined') {
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
           apiUrl = 'http://localhost:3000/api'
         } else {
           // Estamos en la red, usar la IP del servidor
           apiUrl = `http://${hostname}:3000/api`
         }
-      } else if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      } else if (apiUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
         // Si el env tiene localhost pero estamos en la red, reemplazar
-        apiUrl = apiUrl.replace('localhost', window.location.hostname)
+        apiUrl = apiUrl.replace('localhost', hostname)
       }
       
-      console.log('Register - API URL:', apiUrl, 'Hostname:', window.location.hostname)
+      // Si la URL contiene lumo.peranto.app pero estamos en desarrollo local, usar localhost
+      if (import.meta.env.DEV && apiUrl.includes('lumo.peranto.app') && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      }
+      
+      // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+      if (apiUrl.startsWith('https://')) {
+        apiUrl = apiUrl.replace('https://', 'http://')
+      }
+      
+      console.log('Register - API URL:', apiUrl, 'Hostname:', hostname, 'DEV:', import.meta.env.DEV)
       
       const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
@@ -269,15 +297,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Detectar automáticamente la URL del backend
       let apiUrl = import.meta.env.VITE_API_URL
-      if (!apiUrl || apiUrl === 'undefined') {
-        const hostname = window.location.hostname
+      const hostname = window.location.hostname
+      
+      // En desarrollo, siempre usar localhost:3000 si estamos en localhost
+      if (import.meta.env.DEV && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      } else if (!apiUrl || apiUrl === 'undefined') {
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
           apiUrl = 'http://localhost:3000/api'
         } else {
           apiUrl = `http://${hostname}:3000/api`
         }
-      } else if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        apiUrl = apiUrl.replace('localhost', window.location.hostname)
+      } else if (apiUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        apiUrl = apiUrl.replace('localhost', hostname)
+      }
+      
+      // Si la URL contiene lumo.peranto.app pero estamos en desarrollo local, usar localhost
+      if (import.meta.env.DEV && apiUrl.includes('lumo.peranto.app') && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      }
+      
+      // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+      if (apiUrl.startsWith('https://')) {
+        apiUrl = apiUrl.replace('https://', 'http://')
       }
 
       const response = await fetch(`${apiUrl}/auth/forgot-password`, {
@@ -303,15 +345,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Detectar automáticamente la URL del backend
       let apiUrl = import.meta.env.VITE_API_URL
-      if (!apiUrl || apiUrl === 'undefined') {
-        const hostname = window.location.hostname
+      const hostname = window.location.hostname
+      
+      // En desarrollo, siempre usar localhost:3000 si estamos en localhost
+      if (import.meta.env.DEV && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      } else if (!apiUrl || apiUrl === 'undefined') {
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
           apiUrl = 'http://localhost:3000/api'
         } else {
           apiUrl = `http://${hostname}:3000/api`
         }
-      } else if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        apiUrl = apiUrl.replace('localhost', window.location.hostname)
+      } else if (apiUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        apiUrl = apiUrl.replace('localhost', hostname)
+      }
+      
+      // Si la URL contiene lumo.peranto.app pero estamos en desarrollo local, usar localhost
+      if (import.meta.env.DEV && apiUrl.includes('lumo.peranto.app') && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        apiUrl = 'http://localhost:3000/api'
+      }
+      
+      // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+      if (apiUrl.startsWith('https://')) {
+        apiUrl = apiUrl.replace('https://', 'http://')
       }
 
       const response = await fetch(`${apiUrl}/auth/reset-password`, {

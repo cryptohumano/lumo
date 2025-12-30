@@ -12,7 +12,7 @@ async function main() {
   console.log('🌱 Iniciando seed...')
 
   // Obtener email y contraseña desde variables de entorno
-  const adminEmail = process.env.ROOT_ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? 'services@peranto.app' : 'admin@edimburgo.cl')
+  const adminEmail = process.env.ROOT_ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? 'services@peranto.app' : 'admin@peranto.app')
   const adminPassword = process.env.ROOT_ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? 'changeme_secure_password_here' : 'admin123')
   
   if (!adminPassword || adminPassword === 'changeme_secure_password_here') {
@@ -55,10 +55,10 @@ async function main() {
   // Crear usuario conductor de ejemplo
   const driverPassword = await bcrypt.hash('driver123', 10)
   const driver = await prisma.user.upsert({
-    where: { email: 'conductor@edimburgo.cl' },
+    where: { email: 'conductor@peranto.app' },
     update: {},
     create: {
-      email: 'conductor@edimburgo.cl',
+      email: 'conductor@peranto.app',
       name: 'Conductor Ejemplo',
       phone: '+56912345678',
       password: driverPassword,

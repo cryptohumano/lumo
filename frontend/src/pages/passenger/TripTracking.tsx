@@ -69,6 +69,7 @@ export default function PassengerTripTracking() {
       PENDING: { label: t('trip.status.pending') || 'Pendiente', variant: 'outline' },
       CONFIRMED: { label: t('trip.status.confirmed') || 'Confirmado', variant: 'default' },
       IN_PROGRESS: { label: t('trip.status.inProgress') || 'En Progreso', variant: 'default' },
+      PENDING_PAYMENT: { label: t('trip.status.pendingPayment') || 'Pago Pendiente', variant: 'destructive' },
       COMPLETED: { label: t('trip.status.completed') || 'Completado', variant: 'secondary' },
       CANCELLED: { label: t('trip.status.cancelled') || 'Cancelado', variant: 'destructive' },
     }

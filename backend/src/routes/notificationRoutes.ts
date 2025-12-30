@@ -11,6 +11,7 @@ import {
   archiveNotification,
   getUnreadCount,
 } from '../services/notificationService'
+import { prisma } from '../index'
 
 const router = Router()
 
@@ -134,6 +135,72 @@ router.patch('/:id/archive', async (req, res) => {
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,
+    })
+  }
+})
+
+/**
+ * POST /api/notifications/subscribe
+ * Suscribe al usuario a notificaciones push
+ */
+router.post('/subscribe', async (req, res) => {
+  try {
+    const userId = req.user!.id
+    const { subscription } = req.body
+
+    if (!subscription) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Subscription es requerido'
+      })
+    }
+
+    // Obtener el usuario actual
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { metadata: true }
+    })
+
+    // Actualizar metadata con la suscripción push
+    const metadata = (user?.metadata as any) || {}
+    const pushSubscriptions = metadata.pushSubscriptions || []
+    
+    // Verificar si ya existe esta suscripción (por endpoint)
+    const existingIndex = pushSubscriptions.findIndex(
+      (sub: any) => sub.endpoint === subscription.endpoint
+    )
+
+    const subscriptionData = {
+      endpoint: subscription.endpoint,
+      keys: subscription.keys,
+      updatedAt: new Date().toISOString()
+    }
+
+    if (existingIndex >= 0) {
+      // Actualizar suscripción existente
+      pushSubscriptions[existingIndex] = subscriptionData
+    } else {
+      // Agregar nueva suscripción
+      pushSubscriptions.push(subscriptionData)
+    }
+
+    // Actualizar usuario con la nueva suscripción
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        metadata: {
+          ...metadata,
+          pushSubscriptions
+        }
+      }
+    })
+
+    res.json({ success: true, message: 'Suscripción guardada exitosamente' })
+  } catch (error: any) {
+    console.error('Error suscribiendo a push notifications:', error)
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message
     })
   }
 })

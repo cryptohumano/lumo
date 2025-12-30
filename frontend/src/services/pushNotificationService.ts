@@ -123,12 +123,54 @@ export async function initializePushNotifications(): Promise<{
 /**
  * Envía el token de suscripción al backend
  */
+// Helper para obtener la URL base de la API (misma lógica que api.ts)
+function getApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_URL
+  const hostname = window.location.hostname
+  
+  // En desarrollo, siempre usar localhost:3000 si estamos en localhost
+  if (import.meta.env.DEV && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    return 'http://localhost:3000/api'
+  }
+  
+  // Si la URL contiene lumo.peranto.app pero estamos en desarrollo local, usar localhost
+  if (import.meta.env.DEV && envUrl && envUrl.includes('lumo.peranto.app') && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    return 'http://localhost:3000/api'
+  }
+  
+  if (envUrl && envUrl !== 'undefined') {
+    // Si la URL del env usa localhost pero estamos accediendo desde la red, usar la IP del servidor
+    if (envUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      const serverIP = hostname
+      return envUrl.replace('localhost', serverIP)
+    }
+    return envUrl
+  }
+  
+  // Fallback: detectar automáticamente
+  if (import.meta.env.DEV) {
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3000/api'
+    } else {
+      // Estamos en la red, usar la IP del servidor
+      return `http://${hostname}:3000/api`
+    }
+  }
+  
+  // Fallback para producción
+  return '/api'
+}
+
 export async function sendSubscriptionToBackend(
   subscription: PushSubscription,
   userId: string
 ): Promise<boolean> {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/notifications/subscribe`, {
+    const apiUrl = getApiBaseUrl()
+    // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+    const finalUrl = apiUrl.startsWith('https://') ? apiUrl.replace('https://', 'http://') : apiUrl
+    
+    const response = await fetch(`${finalUrl}/notifications/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

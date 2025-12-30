@@ -65,8 +65,8 @@ if (process.env.NODE_ENV === 'production' || process.env.ROOT_ADMIN_EMAIL) {
 
 // Middleware
 const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:5173', 'http://localhost:5174', 'http://72.60.136.211:5174']
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173', 'http://localhost:5174', 'http://72.60.136.211:5174', 'http://lumo.peranto.app', 'http://localhost', 'http://72.60.136.211']
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -100,8 +100,12 @@ import notificationRoutes from './routes/notificationRoutes'
 import driverAlertRoutes from './routes/driverAlertRoutes'
 import onboardingRoutes from './routes/onboardingRoutes'
 import uploadRoutes from './routes/uploadRoutes'
+import polkadotRoutes from './routes/polkadotRoutes'
+import emergencyRoutes from './routes/emergencyRoutes'
+import systemConfigRoutes from './routes/systemConfigRoutes'
 app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/system-config', systemConfigRoutes)
 app.use('/api/currency', currencyRoutes)
 app.use('/api/pricing', pricingRoutes)
 app.use('/api/trips', tripRoutes)
@@ -112,6 +116,12 @@ app.use('/api/driver', driverRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/onboarding', onboardingRoutes)
 app.use('/api/upload', uploadRoutes)
+// Rutas de Polkadot (incluye People Chain)
+app.use('/api/polkadot', polkadotRoutes)
+// Rutas de People Chain (alias para compatibilidad con frontend)
+app.use('/api/people-chain', polkadotRoutes)
+// Rutas de Emergencias
+app.use('/api/emergencies', emergencyRoutes)
 // app.use('/api/users', userRoutes)
 // app.use('/api/whatsapp', whatsappRoutes)
 

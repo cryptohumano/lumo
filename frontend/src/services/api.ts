@@ -5,22 +5,57 @@ import type { User, Trip, Reservation, Experience, Location } from '@/types'
 // Detecta automáticamente si está en localhost o en la red
 const getApiUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL
-  if (envUrl && envUrl !== 'undefined') {
-    // Si la URL del env usa localhost pero estamos accediendo desde la red, usar la IP del servidor
-    if (envUrl.includes('localhost') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      const serverIP = window.location.hostname
-      return envUrl.replace('localhost', serverIP)
+  const hostname = window.location.hostname
+  
+  // En desarrollo, detectar correctamente la URL del backend
+  if (import.meta.env.DEV) {
+    // Si estamos en localhost, usar localhost:3000
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3000/api'
     }
-    return envUrl
+    
+    // Si estamos accediendo desde la IP del servidor (72.60.136.211 o cualquier IP), usar esa IP con puerto 3000
+    // Esto cubre el caso cuando se accede desde http://72.60.136.211:5174
+    if (hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+      return `http://${hostname}:3000/api`
+    }
+    
+    // Si la URL del env contiene lumo.peranto.app pero estamos en desarrollo, usar la IP del servidor
+    if (envUrl && envUrl.includes('lumo.peranto.app')) {
+      return `http://${hostname}:3000/api`
+    }
+  }
+  
+  if (envUrl && envUrl !== 'undefined') {
+    // Forzar HTTP si la URL es HTTPS (para evitar errores de certificado)
+    let finalUrl = envUrl
+    if (finalUrl.startsWith('https://')) {
+      finalUrl = finalUrl.replace('https://', 'http://')
+    }
+    
+    // Si la URL del env usa localhost pero estamos accediendo desde la red, usar la IP del servidor
+    if (finalUrl.includes('localhost') && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      const serverIP = hostname
+      return finalUrl.replace('localhost', serverIP)
+    }
+    
+    // Si la URL contiene lumo.peranto.app pero estamos en desarrollo desde la IP, usar la IP
+    if (import.meta.env.DEV && finalUrl.includes('lumo.peranto.app') && hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+      return `http://${hostname}:3000/api`
+    }
+    
+    return finalUrl
   }
   
   // Fallback: detectar automáticamente
   if (import.meta.env.DEV) {
-    const hostname = window.location.hostname
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3000/api'
+    } else if (hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+      // IP del servidor
+      return `http://${hostname}:3000/api`
     } else {
-      // Estamos en la red, usar la IP del servidor
+      // Dominio, usar puerto 3000
       return `http://${hostname}:3000/api`
     }
   }
@@ -29,12 +64,22 @@ const getApiUrl = () => {
   return '/api'
 }
 
-const API_URL = getApiUrl()
+let API_URL = getApiUrl()
+
+// FORZAR HTTP en desarrollo si detectamos HTTPS
+if (import.meta.env.DEV && API_URL.startsWith('https://')) {
+  console.warn('⚠️ Detectado HTTPS en desarrollo, forzando HTTP:', API_URL)
+  API_URL = API_URL.replace('https://', 'http://')
+}
 
 // Log para debugging (solo en desarrollo)
 if (import.meta.env.DEV) {
-  console.log('API URL:', API_URL)
-  console.log('Frontend hostname:', window.location.hostname)
+  console.log('🔗 API URL final:', API_URL)
+  console.log('🌐 Frontend hostname:', window.location.hostname)
+  console.log('🌐 Frontend origin:', window.location.origin)
+  console.log('🔧 VITE_API_URL:', import.meta.env.VITE_API_URL)
+  console.log('📦 DEV mode:', import.meta.env.DEV)
+  console.log('🔍 IP detectada:', window.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/) ? 'Sí' : 'No')
 }
 
 class ApiClient {
@@ -56,6 +101,13 @@ class ApiClient {
   ): Promise<T> {
     this.loadToken()
     
+    // Asegurar que la URL base siempre use HTTP en desarrollo
+    let baseURL = this.baseURL
+    if (import.meta.env.DEV && baseURL.startsWith('https://')) {
+      baseURL = baseURL.replace('https://', 'http://')
+      console.warn('⚠️ Forzando HTTP en request:', baseURL)
+    }
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -65,17 +117,61 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const fullUrl = `${baseURL}${endpoint}`
+    if (import.meta.env.DEV) {
+      console.log('📡 Request:', fullUrl)
+    }
+
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Error desconocido' }))
-      throw new Error(error.message || `HTTP error! status: ${response.status}`)
+      let errorData: any
+      try {
+        errorData = await response.json()
+      } catch {
+        errorData = { message: `HTTP error! status: ${response.status}` }
+      }
+      
+      // Crear un error con más información para debugging
+      const error = new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      ;(error as any).response = { data: errorData, status: response.status }
+      throw error
     }
 
     return response.json()
+  }
+
+  // Métodos HTTP genéricos
+  async get<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' })
+  }
+
+  async post<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+
+  async patch<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+
+  async delete<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' })
   }
 
   // Auth
@@ -373,6 +469,12 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(userData),
     }).then(res => res.user)
+  }
+
+  async deleteAccount() {
+    return this.request<{ message: string }>('/auth/me', {
+      method: 'DELETE',
+    })
   }
 
   // Admin - Trips
@@ -809,6 +911,389 @@ class ApiClient {
   async completeOnboarding() {
     return this.request<import('@/types').DriverOnboarding>('/onboarding/complete', {
       method: 'POST',
+    })
+  }
+
+  // Polkadot Wallet
+  async getWalletInfo() {
+    return this.request<{
+      hasWallet: boolean
+      address?: string
+      chain?: string
+      balance?: string
+      peopleChainIdentity?: string
+    }>('/polkadot/auth/wallet-info')
+  }
+
+  async linkWallet(address: string, chain: string, signature: string, message: string) {
+    return this.request<{ user: User }>('/polkadot/auth/link-wallet', {
+      method: 'POST',
+      body: JSON.stringify({ address, chain, signature, message }),
+    })
+  }
+
+  async unlinkWallet() {
+    return this.request<{ message: string }>('/polkadot/auth/unlink-wallet', {
+      method: 'DELETE',
+    })
+  }
+
+  // Emergency Services
+  async createEmergency(data: {
+    emergencyType: string
+    severity?: string
+    latitude: number
+    longitude: number
+    address?: string
+    city?: string
+    country?: string
+    placeId?: string
+    title: string
+    description: string
+    numberOfPeople?: number
+    tripId?: string
+    experienceId?: string
+    metadata?: any
+  }) {
+    return this.request<any>('/emergencies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getEmergencies(options?: {
+    page?: number
+    limit?: number
+    status?: string
+    emergencyType?: string
+    severity?: string
+    latitude?: number
+    longitude?: number
+    radiusKm?: number
+    search?: string
+  }) {
+    const params = new URLSearchParams()
+    if (options?.page) params.append('page', options.page.toString())
+    if (options?.limit) params.append('limit', options.limit.toString())
+    if (options?.status) params.append('status', options.status)
+    if (options?.emergencyType) params.append('emergencyType', options.emergencyType)
+    if (options?.severity) params.append('severity', options.severity)
+    if (options?.latitude) params.append('latitude', options.latitude.toString())
+    if (options?.longitude) params.append('longitude', options.longitude.toString())
+    if (options?.radiusKm) params.append('radiusKm', options.radiusKm.toString())
+    if (options?.search) params.append('search', options.search)
+
+    const query = params.toString()
+    return this.request<{
+      emergencies: any[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>(`/emergencies${query ? `?${query}` : ''}`)
+  }
+
+  async getNearbyEmergencies(latitude: number, longitude: number, radiusKm: number = 10, options?: {
+    page?: number
+    limit?: number
+    status?: string
+    emergencyType?: string
+    severity?: string
+  }) {
+    const params = new URLSearchParams()
+    params.append('latitude', latitude.toString())
+    params.append('longitude', longitude.toString())
+    params.append('radiusKm', radiusKm.toString())
+    if (options?.page) params.append('page', options.page.toString())
+    if (options?.limit) params.append('limit', options.limit.toString())
+    if (options?.status) params.append('status', options.status)
+    if (options?.emergencyType) params.append('emergencyType', options.emergencyType)
+    if (options?.severity) params.append('severity', options.severity)
+
+    return this.request<{
+      emergencies: any[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>(`/emergencies/nearby?${params.toString()}`)
+  }
+
+  async getEmergency(emergencyId: string) {
+    return this.request<any>(`/emergencies/${emergencyId}`)
+  }
+
+  async updateEmergencyStatus(
+    emergencyId: string,
+    data: {
+      status: string
+      servicesResponded?: any
+      resolution?: string
+      metadata?: any
+    }
+  ) {
+    return this.request<any>(`/emergencies/${emergencyId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async resolveEmergency(emergencyId: string, resolution: string, servicesResponded?: any) {
+    return this.request<any>(`/emergencies/${emergencyId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ resolution, servicesResponded }),
+    })
+  }
+
+  async cancelEmergency(emergencyId: string, resolution?: string) {
+    return this.request<any>(`/emergencies/${emergencyId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ resolution }),
+    })
+  }
+
+  async createEmergencyAsAuthority(data: {
+    emergencyType: string
+    severity?: string
+    latitude: number
+    longitude: number
+    address?: string
+    city?: string
+    country?: string
+    placeId?: string
+    title: string
+    description: string
+    numberOfPeople?: number
+    tripId?: string
+    experienceId?: string
+    metadata?: any
+  }) {
+    return this.request<any>('/emergencies/authority', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updatePrivacySettings(settings: {
+    showDisplayName?: boolean
+    showLegalName?: boolean
+    showEmail?: boolean
+    showWeb?: boolean
+    showTwitter?: boolean
+    showRiot?: boolean
+    showJudgements?: boolean
+    preferredName?: string
+  }) {
+    return this.request<User>('/polkadot/auth/privacy-settings', {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
+    })
+  }
+
+  // Polkadot Payments
+  async convertCurrency(amount: number, fromCurrency: string, toCurrency: string) {
+    return this.request<{
+      amount: number
+      fromCurrency: string
+      toCurrency: string
+      rate: number
+    }>(`/polkadot/payments/convert?amount=${amount}&fromCurrency=${encodeURIComponent(fromCurrency)}&toCurrency=${encodeURIComponent(toCurrency)}`)
+  }
+
+  async getPolkadotPayments(options?: {
+    page?: number
+    limit?: number
+    status?: string
+    tripId?: string
+  }) {
+    const params = new URLSearchParams()
+    if (options?.page) params.append('page', options.page.toString())
+    if (options?.limit) params.append('limit', options.limit.toString())
+    if (options?.status) params.append('status', options.status)
+    if (options?.tripId) params.append('tripId', options.tripId)
+    const query = params.toString()
+    return this.request<any[]>(`/polkadot/payments${query ? `?${query}` : ''}`)
+  }
+
+  async getPolkadotPayment(paymentId: string) {
+    return this.request<any>(`/polkadot/payments/${paymentId}`)
+  }
+
+  async generatePaymentExtrinsic(paymentId: string) {
+    return this.request<{
+      method: string
+      params: any[]
+      chain: string
+      assetId: number | null
+      amount: string
+      driverAmount: string
+      platformAmount: string
+      toAddress: string
+      platformAddress: string
+      decimals: number
+      currency: string
+      isBatch: boolean
+    }>(`/polkadot/payments/${paymentId}/generate-extrinsic`, {
+      method: 'POST',
+    })
+  }
+
+  async processPayment(
+    paymentId: string,
+    txHash: string,
+    chain: string,
+    blockNumber?: string
+  ) {
+    return this.post<{
+      payment: any
+      message: string
+    }>('/polkadot/payments/process', {
+      paymentId,
+      txHash,
+      chain,
+      blockNumber,
+    })
+  }
+
+  async getPaymentQrCode(paymentId: string) {
+    return this.request<{
+      qrCode: string
+      paymentId: string
+      address: string
+      amount: string
+      currency: string
+    }>(`/polkadot/payments/${paymentId}/qr-code`, {
+      method: 'GET',
+    })
+  }
+
+  // People Chain
+  async getPeopleChainIdentity(address: string) {
+    return this.request<{
+      hasIdentity: boolean
+      displayName?: string
+      legalName?: string
+      email?: string
+      web?: string
+      twitter?: string
+      riot?: string
+      judgements?: any[]
+      deposit?: string
+    }>(`/polkadot/people-chain/identity/${address}`)
+  }
+
+  async getPeopleChainFullIdentity(address: string) {
+    return this.request<{
+      hasIdentity: boolean
+      displayName?: string
+      legalName?: string
+      email?: string
+      web?: string
+      twitter?: string
+      riot?: string
+      judgements?: any[]
+      deposit?: string
+      isVerified?: boolean
+    }>(`/polkadot/people-chain/identity/${address}/full`)
+  }
+
+  async verifyPeopleChainIdentity(address: string) {
+    return this.request<{
+      address: string
+      verified: boolean
+    }>(`/polkadot/people-chain/identity/${address}/verified`)
+  }
+
+  async getPeopleChainDisplayName(address: string) {
+    return this.request<{
+      address: string
+      displayName: string | null
+    }>(`/polkadot/people-chain/identity/${address}/display-name`)
+  }
+
+  async getPeopleChainRegistrationInfo() {
+    return this.request<{
+      basicDeposit: string
+      fieldDeposit: string
+      subAccountDeposit: string
+    }>('/polkadot/people-chain/registration-info')
+  }
+
+  async getPeopleChainRegistrars() {
+    return this.request<{
+      registrars: Array<{
+        account: string
+        fee: string
+        fields: any
+      }>
+      count: number
+      }>('/polkadot/people-chain/registrars')
+  }
+
+  // Admin - Polkadot Config
+  async getPolkadotConfig() {
+    return this.request<{
+      network: string
+      paymentChain: string
+      paymentPreset: string
+      paymentCustom: string | null
+      assetUsdtId: string | null
+      assetUsdcId: string | null
+      platformAddress: string | null
+      platformFeePercentage: number | null
+    }>('/admin/config/polkadot')
+  }
+
+  async updatePolkadotConfig(configs: {
+    network?: string
+    paymentChain?: string
+    paymentPreset?: string
+    paymentCustom?: string | null
+    assetUsdtId?: string | null
+    assetUsdcId?: string | null
+    platformAddress?: string | null
+    platformFeePercentage?: number | null
+  }) {
+    return this.request<{
+      message: string
+      configs: any
+    }>('/admin/config/polkadot', {
+      method: 'PUT',
+      body: JSON.stringify(configs),
+    })
+  }
+
+  // System Config
+  async getSystemConfig() {
+    return this.request<{
+      validations: {
+        distanceStartTrip: boolean
+        distanceEndTrip: boolean
+      }
+      polkadot: any
+    }>('/system-config')
+  }
+
+  async getValidationConfigs() {
+    return this.request<{
+      distanceStartTrip: boolean
+      distanceEndTrip: boolean
+    }>('/system-config/validations')
+  }
+
+  async updateValidationConfigs(configs: {
+    distanceStartTrip?: boolean
+    distanceEndTrip?: boolean
+  }) {
+    return this.request<{
+      message: string
+      validations: {
+        distanceStartTrip: boolean
+        distanceEndTrip: boolean
+      }
+    }>('/system-config/validations', {
+      method: 'PUT',
+      body: JSON.stringify(configs),
     })
   }
 

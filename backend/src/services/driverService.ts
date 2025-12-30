@@ -694,7 +694,7 @@ export async function startTrip(
     throw new Error('Viaje no encontrado o no está confirmado')
   }
 
-  const tripStartPin = (trip as any).startPin
+  let tripStartPin = (trip as any).startPin
   const tripStartPinExpiresAt = (trip as any).startPinExpiresAt
   const now = new Date()
 
@@ -703,8 +703,24 @@ export async function startTrip(
   }
 
   // Verificar que el PIN no haya expirado por tiempo (2 horas desde generación)
+  // Si está expirado, intentar renovarlo automáticamente si el viaje está confirmado y tiene conductor
   if (tripStartPinExpiresAt && tripStartPinExpiresAt < now) {
-    throw new Error('El PIN de inicio ha expirado. Contacta al pasajero para obtener uno nuevo.')
+    // Intentar renovación automática solo si el viaje está confirmado y tiene conductor asignado
+    if (trip.status === TripStatus.CONFIRMED && trip.driverId && trip.passengerId) {
+      try {
+        console.log(`🔄 PIN expirado para viaje ${trip.id}, intentando renovación automática...`)
+        const renewed = await renewStartPin(tripId, trip.passengerId)
+        
+        // Usar el nuevo PIN
+        tripStartPin = renewed.startPin
+        console.log(`✅ PIN renovado automáticamente para viaje ${trip.id}`)
+      } catch (renewError: any) {
+        console.error('Error en renovación automática de PIN:', renewError)
+        throw new Error('El PIN de inicio ha expirado y no se pudo renovar automáticamente. Contacta al pasajero para obtener uno nuevo.')
+      }
+    } else {
+      throw new Error('El PIN de inicio ha expirado. Contacta al pasajero para obtener uno nuevo.')
+    }
   }
 
   // Verificar que la hora de inicio del viaje haya llegado (si está programado)
@@ -739,27 +755,36 @@ export async function startTrip(
     throw new Error('PIN o código QR inválido')
   }
 
-  // Verificar GPS si se proporciona
+  // Verificar GPS si se proporciona (solo si la validación no está desactivada)
   if (options.driverLatitude !== undefined && options.driverLongitude !== undefined) {
-    const isNear = isDriverNearOrigin(
-      options.driverLatitude,
-      options.driverLongitude,
-      trip.originLatitude,
-      trip.originLongitude,
-      100 // 100 metros de tolerancia
+    // Verificar si la validación de distancia está desactivada
+    const { getSystemConfigService } = await import('./systemConfigService')
+    const systemConfig = getSystemConfigService()
+    const isValidationDisabled = await systemConfig.isValidationDisabled(
+      'validation.distance.start_trip' as any
     )
 
-    if (!isNear) {
-      const { calculateDistance: calcDist } = await import('../utils/tripSecurity')
-      const distance = calcDist(
+    if (!isValidationDisabled) {
+      const isNear = isDriverNearOrigin(
         options.driverLatitude,
         options.driverLongitude,
         trip.originLatitude,
-        trip.originLongitude
+        trip.originLongitude,
+        100 // 100 metros de tolerancia
       )
-      throw new Error(
-        `Debes estar cerca del origen para iniciar el viaje. Distancia actual: ${Math.round(distance)}m (máximo: 100m)`
-      )
+
+      if (!isNear) {
+        const { calculateDistance: calcDist } = await import('../utils/tripSecurity')
+        const distance = calcDist(
+          options.driverLatitude,
+          options.driverLongitude,
+          trip.originLatitude,
+          trip.originLongitude
+        )
+        throw new Error(
+          `Debes estar cerca del origen para iniciar el viaje. Distancia actual: ${Math.round(distance)}m (máximo: 100m)`
+        )
+      }
     }
   }
 
@@ -937,34 +962,68 @@ export async function completeTrip(
     throw new Error('Viaje no encontrado o no está en progreso')
   }
 
-  // Verificar GPS si se proporciona
+  // Verificar GPS si se proporciona (solo si la validación no está desactivada)
   if (options?.driverLatitude !== undefined && options?.driverLongitude !== undefined) {
-    const isNear = isDriverNearOrigin(
-      options.driverLatitude,
-      options.driverLongitude,
-      trip.destinationLatitude,
-      trip.destinationLongitude,
-      100 // 100 metros de tolerancia
+    // Verificar si la validación de distancia está desactivada
+    const { getSystemConfigService } = await import('./systemConfigService')
+    const systemConfig = getSystemConfigService()
+    const isValidationDisabled = await systemConfig.isValidationDisabled(
+      'validation.distance.end_trip' as any
     )
 
-    if (!isNear) {
-      const distance = calculateDistance(
+    if (!isValidationDisabled) {
+      const isNear = isDriverNearOrigin(
         options.driverLatitude,
         options.driverLongitude,
         trip.destinationLatitude,
-        trip.destinationLongitude
+        trip.destinationLongitude,
+        100 // 100 metros de tolerancia
       )
-      throw new Error(
-        `Debes estar cerca del destino para completar el viaje. Distancia actual: ${Math.round(distance)}m (máximo: 100m)`
-      )
+
+      if (!isNear) {
+        const distance = calculateDistance(
+          options.driverLatitude,
+          options.driverLongitude,
+          trip.destinationLatitude,
+          trip.destinationLongitude
+        )
+        throw new Error(
+          `Debes estar cerca del destino para completar el viaje. Distancia actual: ${Math.round(distance)}m (máximo: 100m)`
+        )
+      }
     }
   }
 
-  // Actualizar el viaje
+  // Crear el pago antes de cambiar el estado
+  let payment = null
+  if (trip.passengerId && trip.totalPrice) {
+    try {
+      const { polkadotPaymentService } = await import('./polkadotPaymentService')
+      
+      // Crear pago con 8% de fee para la plataforma (92% para el conductor)
+      payment = await polkadotPaymentService.createPayment(
+        trip.passengerId,
+        tripId,
+        trip.totalPrice,
+        trip.currency || 'CLP',
+        undefined, // assetId se determinará automáticamente
+        trip.currency, // originalCurrency
+        trip.totalPrice // originalAmount
+      )
+      
+      console.log(`✅ Pago creado para viaje ${tripId}: ${payment.id}`)
+    } catch (error: any) {
+      console.error('Error creando pago:', error)
+      // No fallar el completado del viaje si hay error creando el pago
+      // El pago se puede crear manualmente después
+    }
+  }
+
+  // Actualizar el viaje a PENDING_PAYMENT (esperando pago)
   const updatedTrip = await prisma.trip.update({
     where: { id: tripId },
     data: {
-      status: TripStatus.COMPLETED,
+      status: TripStatus.PENDING_PAYMENT,
       completedAt: new Date(),
     },
     include: {
@@ -985,6 +1044,13 @@ export async function completeTrip(
           type: true,
         },
       },
+      driver: {
+        select: {
+          id: true,
+          polkadotAddress: true,
+          paymentAddress: true,
+        },
+      },
     },
   })
 
@@ -1002,19 +1068,38 @@ export async function completeTrip(
       const { createNotification } = await import('./notificationService')
       const { NotificationType, NotificationPriority } = await import('@prisma/client')
 
-      // Notificar al pasajero
+      // Notificar al pasajero que debe realizar el pago
       if (updatedTrip.passengerId) {
         await createNotification({
           userId: updatedTrip.passengerId,
-          type: NotificationType.TRIP_COMPLETED,
-          title: 'Viaje completado',
-          message: `Tu viaje ${trip.tripNumber} ha sido completado`,
+          type: NotificationType.PAYMENT_PENDING,
+          title: 'Pago pendiente',
+          message: `El viaje ${trip.tripNumber} ha sido completado. Por favor, realiza el pago.`,
           priority: NotificationPriority.HIGH,
           data: {
             tripId: tripId,
             tripNumber: trip.tripNumber,
+            paymentId: payment?.id,
           },
           actionUrl: `/passenger/trips/${tripId}`,
+          actionLabel: 'Realizar pago',
+        }).catch(() => null)
+      }
+
+      // Notificar al conductor que el viaje está esperando pago
+      if (updatedTrip.driverId) {
+        await createNotification({
+          userId: updatedTrip.driverId,
+          type: NotificationType.PAYMENT_PENDING,
+          title: 'Viaje completado - Esperando pago',
+          message: `El viaje ${trip.tripNumber} ha sido completado. Esperando pago del pasajero.`,
+          priority: NotificationPriority.MEDIUM,
+          data: {
+            tripId: tripId,
+            tripNumber: trip.tripNumber,
+            paymentId: payment?.id,
+          },
+          actionUrl: `/driver/trips/${tripId}`,
           actionLabel: 'Ver viaje',
         }).catch(() => null)
       }
@@ -1023,7 +1108,7 @@ export async function completeTrip(
     }
   })
 
-  return updatedTrip
+  return { ...updatedTrip, payment }
 }
 
 

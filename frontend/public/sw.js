@@ -3,7 +3,7 @@
  * Permite recibir notificaciones incluso cuando el usuario está fuera del navegador
  */
 
-const CACHE_NAME = 'operations-v1'
+const CACHE_NAME = 'lumo-v2'
 const urlsToCache = [
   '/',
   '/index.html',
@@ -39,6 +39,24 @@ self.addEventListener('activate', (event) => {
 
 // Interceptar requests para cache
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+  
+  // Solo interceptar peticiones del mismo origen
+  if (url.origin !== self.location.origin) {
+    // No interceptar peticiones a otros orígenes
+    return
+  }
+  
+  // Solo interceptar peticiones GET
+  if (event.request.method !== 'GET') {
+    return
+  }
+  
+  // No interceptar peticiones a recursos de desarrollo de Vite
+  if (url.pathname.startsWith('/@vite/') || url.pathname.startsWith('/@react-refresh')) {
+    return
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -46,7 +64,37 @@ self.addEventListener('fetch', (event) => {
         if (response) {
           return response
         }
+        // Intentar hacer fetch, pero manejar errores
         return fetch(event.request)
+          .then((response) => {
+            // Verificar que la respuesta sea válida
+            if (!response || response.status !== 200 || response.type === 'error') {
+              return response
+            }
+            // Clonar la respuesta para cachearla
+            const responseToCache = response.clone()
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache)
+              })
+              .catch((err) => {
+                console.log('Service Worker: Error al cachear:', err)
+              })
+            return response
+          })
+          .catch((error) => {
+            console.log('Service Worker: Error en fetch:', error)
+            // Si falla el fetch y no hay cache, devolver una respuesta de error
+            // pero no lanzar el error para evitar que se propague
+            return new Response('Network error', { status: 408, statusText: 'Request Timeout' })
+          })
+      })
+      .catch((error) => {
+        console.log('Service Worker: Error en cache match:', error)
+        // Si falla todo, intentar hacer fetch directamente
+        return fetch(event.request).catch(() => {
+          return new Response('Service unavailable', { status: 503 })
+        })
       })
   )
 })

@@ -5,8 +5,8 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Instalar corepack para yarn
-RUN corepack enable && corepack prepare yarn@stable --activate
+# Instalar corepack para yarn y forzar versión 1.22.19
+RUN corepack enable && corepack prepare yarn@1.22.19 --activate
 
 # Copiar archivos de dependencias
 COPY package.json yarn.lock* ./
@@ -32,8 +32,8 @@ RUN set -eux; \
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Instalar corepack para yarn
-RUN corepack enable && corepack prepare yarn@stable --activate
+# Instalar corepack para yarn y forzar versión 1.22.19
+RUN corepack enable && corepack prepare yarn@1.22.19 --activate
 
 # Copiar node_modules y configuración de yarn
 COPY --from=deps /app/node_modules ./node_modules
@@ -48,10 +48,10 @@ ENV NODE_ENV=${NODE_ENV}
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
 
-# Construir con Vite (usar npx para evitar problemas con workspaces)
+# Construir con Vite (usar el script de build del package.json)
 # Vite maneja TypeScript directamente, no necesitamos compilar con tsc primero
 # Nota: Los errores de tipo se deben corregir en el código fuente
-RUN npx vite build
+RUN node node_modules/vite/bin/vite.js build
 
 # Stage 3: Production (Nginx para servir estáticos)
 FROM nginx:alpine AS production
