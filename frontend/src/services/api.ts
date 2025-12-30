@@ -1167,6 +1167,77 @@ class ApiClient {
     })
   }
 
+  // Emergency Blockchain Decoder (solo autoridades)
+  async decodeEmergencyFromTxHash(txHash: string, chain?: string) {
+    return this.request<{
+      emergency: {
+        emergencyId: string
+        reporter: string
+        emergencyType: string
+        severity: string
+        latitude: number
+        longitude: number
+        timestamp: number
+        title?: string
+        description?: string
+        numberOfPeople?: number
+        address?: string
+        city?: string
+        country?: string
+        blockNumber: string
+        blockHash: string
+        txHash: string
+        rawData: any
+      }
+    }>(`/emergency-blockchain/decode/${txHash}${chain ? `?chain=${chain}` : ''}`)
+  }
+
+  async decodeEmergenciesFromBlock(blockNumber: number, chain?: string) {
+    return this.request<{
+      blockNumber: number
+      chain: string
+      emergencies: Array<{
+        emergencyId: string
+        reporter: string
+        emergencyType: string
+        severity: string
+        latitude: number
+        longitude: number
+        timestamp: number
+        title?: string
+        description?: string
+        numberOfPeople?: number
+        address?: string
+        city?: string
+        country?: string
+        blockNumber: string
+        blockHash: string
+        txHash: string
+        rawData: any
+      }>
+      count: number
+    }>(`/emergency-blockchain/block/${blockNumber}${chain ? `?chain=${chain}` : ''}`)
+  }
+
+  async searchEmergenciesInRange(fromBlock: number, toBlock: number, chain?: string) {
+    return this.request<{
+      fromBlock: number
+      toBlock: number
+      chain: string
+      emergencies: Array<any>
+      count: number
+    }>(`/emergency-blockchain/range?fromBlock=${fromBlock}&toBlock=${toBlock}${chain ? `&chain=${chain}` : ''}`)
+  }
+
+  async getRecentEmergencies(lastNBlocks?: number, chain?: string) {
+    return this.request<{
+      lastNBlocks: number
+      chain: string
+      emergencies: Array<any>
+      count: number
+    }>(`/emergency-blockchain/recent?lastNBlocks=${lastNBlocks || 100}${chain ? `&chain=${chain}` : ''}`)
+  }
+
   // People Chain
   async getPeopleChainIdentity(address: string) {
     return this.request<{
@@ -1230,18 +1301,36 @@ class ApiClient {
       }>('/polkadot/people-chain/registrars')
   }
 
-  // Admin - Polkadot Config
+  // Admin - Polkadot Config (solo lectura pública)
   async getPolkadotConfig() {
-    return this.request<{
-      network: string
-      paymentChain: string
-      paymentPreset: string
-      paymentCustom: string | null
-      assetUsdtId: string | null
-      assetUsdcId: string | null
-      platformAddress: string | null
-      platformFeePercentage: number | null
-    }>('/admin/config/polkadot')
+    // Intentar primero el endpoint público, si falla usar el de admin
+    try {
+      return await this.request<{
+        network: string
+        paymentChain: string
+        paymentPreset: string
+        paymentCustom: string | null
+        assetUsdtId: string | null
+        assetUsdcId: string | null
+        platformAddress: string | null
+        platformFeePercentage: number | null
+      }>('/polkadot/config')
+    } catch (error: any) {
+      // Fallback al endpoint de admin si el usuario es admin
+      if (error.status === 403) {
+        return await this.request<{
+          network: string
+          paymentChain: string
+          paymentPreset: string
+          paymentCustom: string | null
+          assetUsdtId: string | null
+          assetUsdcId: string | null
+          platformAddress: string | null
+          platformFeePercentage: number | null
+        }>('/admin/config/polkadot')
+      }
+      throw error
+    }
   }
 
   async updatePolkadotConfig(configs: {

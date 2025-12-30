@@ -556,6 +556,36 @@ router.get('/auth/wallet-info', authenticate, async (req, res) => {
 })
 
 /**
+ * GET /api/polkadot/config
+ * Obtiene la configuración de Polkadot (público, solo lectura)
+ * Cualquier usuario autenticado puede leer esta configuración
+ */
+router.get('/config', authenticate, async (req, res) => {
+  try {
+    const { getSystemConfigService } = await import('../services/systemConfigService')
+    const systemConfig = getSystemConfigService()
+    const configs = await systemConfig.getPolkadotConfigs()
+    
+    res.json({
+      network: configs.network,
+      paymentChain: configs.paymentChain,
+      paymentPreset: configs.paymentPreset,
+      paymentCustom: configs.paymentCustom,
+      assetUsdtId: configs.usdtAssetId,
+      assetUsdcId: configs.usdcAssetId,
+      platformAddress: configs.platformAddress,
+      platformFeePercentage: configs.platformFeePercentage ? parseFloat(configs.platformFeePercentage) : null,
+    })
+  } catch (error: any) {
+    console.error('Error obteniendo configuraciones de Polkadot:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message || 'Error al obtener configuraciones',
+    })
+  }
+})
+
+/**
  * POST /api/polkadot/payments/create
  * Crea un pago pendiente que será procesado con Polkadot
  */

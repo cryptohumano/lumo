@@ -357,7 +357,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetails | n
           let country: string | undefined
           if (place.address_components) {
             const countryComponent = place.address_components.find(
-              (component) => component.types.includes('country')
+              (component: { types: string[]; short_name?: string }) => component.types.includes('country')
             )
             country = countryComponent?.short_name
           }
@@ -372,6 +372,60 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetails | n
             },
             name: place.name,
             types: place.types,
+          })
+        } else {
+          resolve(null)
+        }
+      }
+    )
+  })
+}
+
+/**
+ * Realiza geocodificación inversa (obtiene dirección desde coordenadas)
+ */
+export async function reverseGeocode(lat: number, lng: number): Promise<PlaceDetails | null> {
+  if (!window.google?.maps) {
+    if (!googleMapsApiKey) {
+      throw new Error('Google Maps no está inicializado')
+    }
+    await loadGoogleMapsScript(googleMapsApiKey)
+  }
+
+  if (!window.google.maps.Geocoder) {
+    return null
+  }
+
+  return new Promise((resolve) => {
+    const geocoder = new window.google.maps.Geocoder()
+    geocoder.geocode(
+      { location: { lat, lng } },
+      (
+        results: any[] | null,
+        status: any
+      ) => {
+        if (status === window.google.maps.GeocoderStatus.OK && results && results.length > 0) {
+          const result = results[0]
+          
+          // Extraer código de país desde address_components
+          let country: string | undefined
+          if (result.address_components) {
+            const countryComponent = result.address_components.find(
+              (component: { types: string[]; short_name?: string }) => component.types.includes('country')
+            )
+            country = countryComponent?.short_name
+          }
+
+          resolve({
+            placeId: result.place_id || '',
+            formattedAddress: result.formatted_address || '',
+            country,
+            location: {
+              lat: result.geometry?.location?.lat() || lat,
+              lng: result.geometry?.location?.lng() || lng,
+            },
+            name: result.formatted_address,
+            types: result.types,
           })
         } else {
           resolve(null)

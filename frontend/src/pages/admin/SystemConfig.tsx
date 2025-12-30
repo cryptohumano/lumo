@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,13 +35,14 @@ const PAYMENT_PRESETS = [
   { id: 'asset-hub-usdt', name: 'USDT en Asset Hub (Polkadot)', chain: 'ASSET_HUB', currency: 'USDT', isTestnet: false },
   // Asset Hub Kusama
   { id: 'asset-hub-kusama-ksm', name: 'KSM en Asset Hub (Kusama)', chain: 'ASSET_HUB_KUSAMA', currency: 'KSM', isTestnet: false },
-  // PassetHub (Testnet)
-  { id: 'paset-hub-dot', name: 'DOT en PassetHub (Testnet)', chain: 'PASET_HUB', currency: 'DOT', isTestnet: true },
-  { id: 'paset-hub-pas', name: 'PAS en PassetHub (Testnet)', chain: 'PASET_HUB', currency: 'PAS', isTestnet: true },
-  { id: 'paset-hub-usdc', name: 'USDC en PassetHub (Testnet)', chain: 'PASET_HUB', currency: 'USDC', isTestnet: true },
+  // Asset Hub de Paseo (Testnet)
+  { id: 'paset-hub-dot', name: 'DOT en Asset Hub de Paseo (Testnet)', chain: 'PASET_HUB', currency: 'DOT', isTestnet: true },
+  { id: 'paset-hub-pas', name: 'PAS en Asset Hub de Paseo (Testnet)', chain: 'PASET_HUB', currency: 'PAS', isTestnet: true },
+  { id: 'paset-hub-usdc', name: 'USDC en Asset Hub de Paseo (Testnet)', chain: 'PASET_HUB', currency: 'USDC', isTestnet: true },
 ]
 
 export default function SystemConfig() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -102,13 +104,13 @@ export default function SystemConfig() {
       setSaving(true)
       const safeConfigs = configs || { distanceStartTrip: false, distanceEndTrip: false }
       await api.put('/system-config/validations', safeConfigs)
-      toast.success('Configuraciones guardadas', {
-        description: 'Las configuraciones del sistema se han actualizado correctamente',
+      toast.success(t('systemConfig.validations.success'), {
+        description: t('systemConfig.validations.success'),
       })
     } catch (error: any) {
       console.error('Error guardando configuraciones:', error)
-      toast.error('Error al guardar configuraciones', {
-        description: error.response?.data?.message || error.message || 'No se pudieron guardar las configuraciones',
+      toast.error(t('systemConfig.validations.error'), {
+        description: error.response?.data?.message || error.message || t('systemConfig.validations.error'),
       })
     } finally {
       setSaving(false)
@@ -169,13 +171,13 @@ export default function SystemConfig() {
         platformAddress: polkadotConfigs.platformAddress || null,
         platformFeePercentage: polkadotConfigs.platformFeePercentage || null,
       })
-      toast.success('Configuraciones de Polkadot guardadas', {
-        description: 'Las configuraciones de pagos se han actualizado correctamente',
+      toast.success(t('systemConfig.polkadot.success'), {
+        description: t('systemConfig.polkadot.success'),
       })
     } catch (error: any) {
       console.error('Error guardando configuraciones de Polkadot:', error)
-      toast.error('Error al guardar configuraciones de Polkadot', {
-        description: error.response?.data?.message || error.message || 'No se pudieron guardar las configuraciones',
+      toast.error(t('systemConfig.polkadot.error'), {
+        description: error.response?.data?.message || error.message || t('systemConfig.polkadot.error'),
       })
     } finally {
       setSavingPolkadot(false)
@@ -200,7 +202,7 @@ export default function SystemConfig() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Cargando configuraciones...</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           </div>
         </div>
       </div>
@@ -213,10 +215,10 @@ export default function SystemConfig() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Settings className="h-8 w-8" />
-            Configuración del Sistema
+            {t('systemConfig.title')}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Gestiona las configuraciones globales de la aplicación
+            {t('systemConfig.description')}
           </p>
         </div>
       </div>
@@ -225,11 +227,10 @@ export default function SystemConfig() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            Validaciones de Distancia
+            {t('systemConfig.validations.title')}
           </CardTitle>
           <CardDescription>
-            Activa o desactiva las validaciones de distancia para iniciar y completar viajes.
-            Útil para pruebas y desarrollo.
+            {t('systemConfig.validations.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -237,7 +238,7 @@ export default function SystemConfig() {
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="space-y-1 flex-1">
                 <Label htmlFor="distance-start-trip" className="text-base font-semibold">
-                  Validación de distancia para iniciar viaje
+                  {t('systemConfig.validations.distanceStartTrip')}
                 </Label>
                 <p className="text-sm text-muted-foreground">
                   Cuando está desactivada, los conductores pueden iniciar viajes sin estar cerca del origen.
@@ -272,7 +273,7 @@ export default function SystemConfig() {
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="space-y-1 flex-1">
                 <Label htmlFor="distance-end-trip" className="text-base font-semibold">
-                  Validación de distancia para completar viaje
+                  {t('systemConfig.validations.distanceEndTrip')}
                 </Label>
                 <p className="text-sm text-muted-foreground">
                   Cuando está desactivada, los conductores pueden completar viajes sin estar cerca del destino.
@@ -311,13 +312,13 @@ export default function SystemConfig() {
               onClick={loadConfigs}
               disabled={saving}
             >
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Guardando...' : 'Guardar Cambios'}
+              {saving ? t('systemConfig.validations.saving') : t('systemConfig.validations.save')}
             </Button>
           </div>
         </CardContent>
@@ -328,10 +329,10 @@ export default function SystemConfig() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="h-5 w-5" />
-            Configuración de Pagos Polkadot
+            {t('systemConfig.polkadot.title')}
           </CardTitle>
           <CardDescription>
-            Configura la cadena de Polkadot, presets de pago, dirección de la plataforma y porcentaje de comisión.
+            {t('systemConfig.polkadot.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -339,18 +340,18 @@ export default function SystemConfig() {
             {/* Selección de Preset */}
             <div className="space-y-2">
               <Label htmlFor="payment-preset" className="text-base font-semibold">
-                Preset de Pago
+                {t('systemConfig.polkadot.paymentPreset')}
               </Label>
               <Select
                 value={polkadotConfigs.paymentPreset || undefined}
                 onValueChange={handlePresetChange}
               >
                 <SelectTrigger id="payment-preset">
-                  <SelectValue placeholder="Selecciona un preset de pago" />
+                  <SelectValue placeholder={t('systemConfig.polkadot.selectPreset')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="paset-hub-pas" className="font-semibold">
-                    🧪 PAS en PassetHub (Testnet) - Recomendado para desarrollo
+                    🧪 PAS en Asset Hub de Paseo (Testnet) - Recomendado para desarrollo
                   </SelectItem>
                   {PAYMENT_PRESETS.map((preset) => (
                     <SelectItem key={preset.id} value={preset.id}>
@@ -363,7 +364,7 @@ export default function SystemConfig() {
               <p className="text-xs text-muted-foreground">
                 {polkadotConfigs.paymentPreset 
                   ? PAYMENT_PRESETS.find(p => p.id === polkadotConfigs.paymentPreset)?.name || ''
-                  : 'Por defecto en desarrollo: PAS en PassetHub (Testnet)'}
+                  : 'Por defecto en desarrollo: PAS en Asset Hub de Paseo (Testnet)'}
               </p>
             </div>
 
@@ -372,14 +373,14 @@ export default function SystemConfig() {
             {/* Cadena de Pago */}
             <div className="space-y-2">
               <Label htmlFor="payment-chain" className="text-base font-semibold">
-                Cadena de Pago
+                {t('systemConfig.polkadot.paymentChain')}
               </Label>
               <Select
                 value={polkadotConfigs.paymentChain || undefined}
                 onValueChange={(value) => setPolkadotConfigs(prev => ({ ...prev, paymentChain: value, network: value }))}
               >
                 <SelectTrigger id="payment-chain">
-                  <SelectValue placeholder="Selecciona una cadena" />
+                  <SelectValue placeholder={t('systemConfig.polkadot.selectChain')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PASET_HUB">🧪 PASET_HUB (Testnet - Paseo Asset Hub)</SelectItem>
@@ -397,7 +398,7 @@ export default function SystemConfig() {
             {/* Dirección de Plataforma */}
             <div className="space-y-2">
               <Label htmlFor="platform-address" className="text-base font-semibold">
-                Dirección de Wallet de la Plataforma
+                {t('systemConfig.polkadot.platformAddress')}
               </Label>
               <Input
                 id="platform-address"
@@ -407,8 +408,7 @@ export default function SystemConfig() {
                 onChange={(e) => setPolkadotConfigs(prev => ({ ...prev, platformAddress: e.target.value || null }))}
               />
               <p className="text-xs text-muted-foreground">
-                Dirección de wallet donde la plataforma recibirá el {polkadotConfigs.platformFeePercentage || 8}% de comisión de los pagos.
-                Esta dirección debe estar en la misma cadena seleccionada arriba.
+                {t('systemConfig.polkadot.platformAddressDescription')}
               </p>
             </div>
 
@@ -417,7 +417,7 @@ export default function SystemConfig() {
             {/* Porcentaje de Fee */}
             <div className="space-y-2">
               <Label htmlFor="platform-fee" className="text-base font-semibold">
-                Porcentaje de Comisión de la Plataforma (%)
+                {t('systemConfig.polkadot.platformFeePercentage')}
               </Label>
               <Input
                 id="platform-fee"
@@ -433,8 +433,7 @@ export default function SystemConfig() {
                 }}
               />
               <p className="text-xs text-muted-foreground">
-                Porcentaje que recibirá la plataforma de cada pago. El resto irá al conductor.
-                Por defecto: 8% (92% para el conductor).
+                {t('systemConfig.polkadot.platformFeePercentageDescription')}
               </p>
             </div>
           </div>
@@ -447,13 +446,13 @@ export default function SystemConfig() {
               onClick={loadPolkadotConfigs}
               disabled={savingPolkadot}
             >
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSavePolkadot}
               disabled={savingPolkadot}
             >
-              {savingPolkadot ? 'Guardando...' : 'Guardar Configuración de Polkadot'}
+              {savingPolkadot ? t('systemConfig.polkadot.saving') : t('systemConfig.polkadot.save')}
             </Button>
           </div>
         </CardContent>

@@ -68,6 +68,71 @@ async function main() {
   })
   console.log('✅ Usuario conductor creado:', driver.email)
 
+  // Crear usuario autoridad de ejemplo
+  const authorityPassword = await bcrypt.hash('authority123', 10)
+  const authority = await prisma.user.upsert({
+    where: { email: 'authority@peranto.app' },
+    update: {},
+    create: {
+      email: 'authority@peranto.app',
+      name: 'Autoridad Ejemplo',
+      phone: '+56911111111',
+      password: authorityPassword,
+      role: 'AUTHORITY',
+      isActive: true,
+      isEmailVerified: true,
+      preferredCurrency: 'CLP',
+      country: 'CL',
+      userRoles: {
+        create: {
+          role: 'AUTHORITY'
+        }
+      }
+    },
+  })
+  console.log('✅ Usuario autoridad creado:', authority.email)
+
+  // Crear perfil de autoridad
+  try {
+    const authorityProfile = await prisma.authorityProfile.upsert({
+      where: { userId: authority.id },
+      update: {},
+      create: {
+        userId: authority.id,
+        authorityType: 'POLICE',
+        department: 'Policía Nacional',
+        badgeNumber: 'AUTH-001',
+        contactPhone: '+56911111111',
+        contactEmail: 'authority@peranto.app',
+        isVerified: true,
+        areaOfCoverage: {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                  [-70.7, -33.5],
+                  [-70.6, -33.5],
+                  [-70.6, -33.4],
+                  [-70.7, -33.4],
+                  [-70.7, -33.5]
+                ]]
+              }
+            }
+          ]
+        },
+        metadata: {
+          notes: 'Usuario de prueba para gestión de emergencias'
+        }
+      },
+    })
+    console.log('✅ Perfil de autoridad creado:', authorityProfile.department)
+  } catch (error) {
+    console.log('⚠️ No se pudo crear el perfil de autoridad (puede que el modelo no esté disponible):', error)
+  }
+
   // Crear número de WhatsApp para el conductor
   try {
     const whatsappNumber = await prisma.whatsappNumber.upsert({

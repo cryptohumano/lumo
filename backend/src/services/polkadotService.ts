@@ -11,10 +11,13 @@ export const POLKADOT_CHAINS = {
   ASSET_HUB: 'wss://polkadot-asset-hub-rpc.polkadot.io',
   PEOPLE_CHAIN: 'wss://polkadot-people-rpc.polkadot.io', // People Chain en Polkadot
   ASSET_HUB_KUSAMA: 'wss://kusama-asset-hub-rpc.polkadot.io',
-  // Testnet
-  PASET_HUB: 'wss://pas-rpc.stakeworld.io/assethub', // Passet Hub (Paseo Asset Hub - Testnet) - Endpoint alternativo
-  WESTEND: 'wss://westend-rpc.polkadot.io',
-  WESTEND_ASSET_HUB: 'wss://westend-asset-hub-rpc.polkadot.io',
+  // Testnet - Paseo (Asset Hub de Paseo)
+  PASET_HUB: 'wss://sys.ibp.network/asset-hub-paseo', // Asset Hub de Paseo (Testnet oficial)
+  // Endpoints alternativos de Paseo Asset Hub:
+  // - wss://rpc.ibp.network/paseo-asset-hub
+  // - wss://paseo-asset-hub-rpc.dotters.network
+  WESTEND: 'wss://westend-rpc.polkadot.io', // ⚠️ Deprecado
+  WESTEND_ASSET_HUB: 'wss://westend-asset-hub-rpc.polkadot.io', // ⚠️ Deprecado
 } as const
 
 /**

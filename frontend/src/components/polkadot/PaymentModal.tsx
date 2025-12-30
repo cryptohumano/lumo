@@ -804,7 +804,7 @@ export function PaymentModal({
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Chain:</span>
                       <span className="font-mono">
-                        {extrinsicData.chain === 'PASET_HUB' ? 'PassetHub (Testnet)' : extrinsicData.chain}
+                        {extrinsicData.chain === 'PASET_HUB' ? 'Asset Hub de Paseo (Testnet)' : extrinsicData.chain}
                       </span>
                     </div>
                     <div className="flex justify-between">

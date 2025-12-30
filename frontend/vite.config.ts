@@ -18,6 +18,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react/jsx-runtime', 'html5-qrcode'],
     exclude: [],
+    force: true, // Forzar re-optimización para resolver problemas de múltiples copias de React
   },
   server: {
     port: 5174, // Puerto diferente a website (5173)

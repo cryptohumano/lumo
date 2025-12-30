@@ -76,41 +76,41 @@ export const PAYMENT_PRESETS: PaymentPreset[] = [
   },
   // USDT/USDC en Kusama pendiente de verificar
 
-  // === PASET HUB (Testnet) ===
+  // === PASET HUB (Testnet - Asset Hub de Paseo) ===
   {
     id: 'paset-hub-dot',
-    name: 'DOT en PassetHub (Testnet)',
+    name: 'DOT en Asset Hub de Paseo (Testnet)',
     chain: 'PASET_HUB',
-    endpoint: 'wss://pas-rpc.stakeworld.io/assethub',
+    endpoint: 'wss://sys.ibp.network/asset-hub-paseo',
     currency: 'DOT',
     assetId: null, // Token nativo
     decimals: 10,
     isTestnet: true,
-    description: 'DOT nativo en PassetHub (testnet) - Solo para desarrollo',
+    description: 'DOT nativo en Asset Hub de Paseo (testnet oficial) - Solo para desarrollo',
     verified: true,
   },
   {
     id: 'paset-hub-pas',
-    name: 'PAS en PassetHub (Testnet)',
+    name: 'PAS en Asset Hub de Paseo (Testnet)',
     chain: 'PASET_HUB',
-    endpoint: 'wss://pas-rpc.stakeworld.io/assethub',
+    endpoint: 'wss://sys.ibp.network/asset-hub-paseo',
     currency: 'PAS',
-    assetId: null, // PAS es el token nativo en PassetHub
+    assetId: null, // PAS es el token nativo en Asset Hub de Paseo
     decimals: 10,
     isTestnet: true,
-    description: 'PAS (token nativo) en PassetHub (testnet) - Sin conversión',
+    description: 'PAS (token nativo) en Asset Hub de Paseo (testnet oficial) - Sin conversión',
     verified: true,
   },
   {
     id: 'paset-hub-usdc',
-    name: 'USDC en PassetHub (Testnet)',
+    name: 'USDC en Asset Hub de Paseo (Testnet)',
     chain: 'PASET_HUB',
-    endpoint: 'wss://pas-rpc.stakeworld.io/assethub',
+    endpoint: 'wss://sys.ibp.network/asset-hub-paseo',
     currency: 'USDC',
     assetId: 1337, // Asset ID de USDC en Paseo Asset Hub
     decimals: 6,
     isTestnet: true,
-    description: 'USDC (USD Coin) en PassetHub (testnet) - Asset ID: 1337 - Existential Deposit: 70000',
+    description: 'USDC (USD Coin) en Asset Hub de Paseo (testnet oficial) - Asset ID: 1337 - Existential Deposit: 70000',
     verified: true,
   },
   // Assets en testnet pendiente de verificar

@@ -32,10 +32,14 @@ import HostProfile from '@/pages/host/Profile'
 import DispatcherProfile from '@/pages/dispatcher/Profile'
 import SupportProfile from '@/pages/support/Profile'
 import ModeratorProfile from '@/pages/moderator/Profile'
+import AuthorityDashboard from '@/pages/authority/Dashboard'
+import BlockchainEvents from '@/pages/authority/BlockchainEvents'
 import Settings from '@/pages/Settings'
 import Terms from '@/pages/Terms'
 import Privacy from '@/pages/Privacy'
 import ReportEmergency from '@/pages/ReportEmergency'
+import Emergencies from '@/pages/Emergencies'
+import EmergencyDetails from '@/pages/EmergencyDetails'
 import { DriverAlertManager } from '@/components/alerts/DriverAlertManager'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { InstallPWAButton } from '@/components/pwa/InstallPWAButton'
@@ -272,12 +276,28 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        {/* Ruta de Emergencias */}
+        {/* Rutas de Emergencias */}
         <Route
           path="report-emergency"
           element={
             <ProtectedRoute>
               <ReportEmergency />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="emergencies"
+          element={
+            <ProtectedRoute>
+              <Emergencies />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="emergencies/:id"
+          element={
+            <ProtectedRoute>
+              <EmergencyDetails />
             </ProtectedRoute>
           }
         />
@@ -348,6 +368,33 @@ function AppRoutes() {
             } 
           />
         </Route>
+        {/* Rutas de Autoridad */}
+        <Route path="authority">
+          <Route
+            index
+            element={
+              <ProtectedRoute requiredRole="AUTHORITY">
+                <AuthorityDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedRoute requiredRole="AUTHORITY">
+                <AuthorityDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="blockchain-events"
+            element={
+              <ProtectedRoute requiredRole="AUTHORITY">
+                <BlockchainEvents />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
         {/* Rutas de Host */}
         <Route path="host">
           <Route 
@@ -415,7 +462,12 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <AppContent />
         </BrowserRouter>
       </AuthProvider>

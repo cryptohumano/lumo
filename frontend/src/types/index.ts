@@ -10,6 +10,7 @@ export const enum UserRole {
   MODERATOR = 'MODERATOR',
   ADMIN = 'ADMIN',
   OPERATOR = 'OPERATOR', // @deprecated
+  AUTHORITY = 'AUTHORITY',
 }
 
 export const enum Currency {

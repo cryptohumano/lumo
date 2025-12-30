@@ -349,6 +349,9 @@ export async function getEmergencyById(emergencyId: string) {
           phone: true,
           role: true,
           avatar: true,
+          polkadotAddress: true,
+          polkadotChain: true,
+          peopleChainIdentity: true,
         },
       },
       resolver: {

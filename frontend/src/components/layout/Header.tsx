@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import UserMenu from './UserMenu'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import StarIcon from './StarIcon'
+import { AlertTriangle } from 'lucide-react'
 
 export default function Header() {
   const { t } = useTranslation()
@@ -42,9 +43,20 @@ export default function Header() {
                         <Button variant="ghost">{t('navigation.admin') || 'Administración'}</Button>
                       </Link>
                     )}
+                    {currentRole === 'AUTHORITY' && (
+                      <Link to="/authority/dashboard">
+                        <Button variant="ghost">{t('navigation.authority') || 'Emergencias'}</Button>
+                      </Link>
+                    )}
                   </>
                 )
               })()}
+              <Link to="/emergencies">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  {t('navigation.emergencies') || 'Emergencias'}
+                </Button>
+              </Link>
               <NotificationBell />
               <UserMenu />
             </>

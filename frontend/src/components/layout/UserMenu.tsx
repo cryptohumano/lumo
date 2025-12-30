@@ -12,7 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Globe, Settings, MapPin, Moon, Sun, Monitor, UserCircle } from 'lucide-react'
+import { Globe, Settings, MapPin, Moon, Sun, Monitor, UserCircle, AlertTriangle } from 'lucide-react'
 import { getCountryName } from '@/services/locationService'
 import { useTheme } from '@/contexts/ThemeContext'
 import { UserRole } from '@/types'
@@ -90,6 +90,7 @@ export default function UserMenu() {
         MODERATOR: '/moderator/dashboard',
         ADMIN: '/admin/dashboard',
         OPERATOR: '/admin/dashboard',
+        AUTHORITY: '/authority/dashboard',
       }
       
       const dashboardRoute = dashboardRoutes[newRole] || '/'
@@ -214,6 +215,14 @@ export default function UserMenu() {
         }}>
           <UserCircle className="h-4 w-4 mr-2" />
           {t('profile.title') || 'Mi Perfil'}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/emergencies')}>
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          {t('navigation.emergencies') || 'Emergencias'}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/report-emergency')}>
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          {t('emergency.report.title') || 'Reportar Emergencia'}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate('/settings')}>
           <Settings className="h-4 w-4 mr-2" />

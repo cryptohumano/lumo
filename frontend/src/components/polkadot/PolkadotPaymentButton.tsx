@@ -120,10 +120,33 @@ export function PolkadotPaymentButton({
         }
       }
 
-      // 5. Firmar y enviar la transacción
-      const txHash = await extrinsic.signAndSend(selectedAccount.address, {
-        signer: injector.signer,
-      })
+      // 5. (Opcional) Obtener información de pago antes de enviar
+      let estimatedFee: bigint | null = null
+      try {
+        const paymentInfo = await extrinsic.paymentInfo(selectedAccount.address)
+        estimatedFee = paymentInfo.partialFee || null
+        console.log('💰 Fee estimado para pago:', estimatedFee?.toString() || 'N/A')
+      } catch (error) {
+        console.warn('No se pudo obtener información de pago:', error)
+      }
+
+      // 6. Firmar y enviar la transacción
+      // Usar untilFinalized() para obtener el resultado completo con blockHash
+      const result = await extrinsic
+        .signAndSend(selectedAccount.address, {
+          signer: injector.signer,
+        }, ({ status }) => {
+          // Monitorear el estado
+          if (status.type === 'BestChainBlockIncluded' || status.type === 'Finalized') {
+            console.log('✅ Pago en bloque:', status.value?.blockNumber)
+          }
+        })
+        .untilFinalized()
+
+      // Obtener el hash de la transacción
+      const txHash = result.status.type === 'Finalized'
+        ? result.status.value.blockHash
+        : result.txHash || 'unknown'
 
       // 6. Procesar pago en el backend
       await processPayment(paymentId, txHash, extrinsicData.chain as ChainName)

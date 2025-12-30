@@ -18,11 +18,19 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     // Cargar desde localStorage o usar 'system' por defecto
-    const saved = localStorage.getItem('theme') as Theme | null
-    return saved || 'system'
+    // Verificar que estamos en el navegador antes de acceder a localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme') as Theme | null
+      return saved || 'system'
+    }
+    return 'system'
   })
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    // Verificar que estamos en el navegador
+    if (typeof window === 'undefined') {
+      return 'light'
+    }
     if (theme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
@@ -64,7 +72,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', newTheme)
+    }
   }
 
   return (

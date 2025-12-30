@@ -9,6 +9,8 @@ import dotenv from 'dotenv'
 import path from 'path'
 import fs from 'fs'
 import { PrismaClient } from '@prisma/client'
+import { getEmergencyBlockchainService } from './services/emergencyBlockchainService'
+import type { ChainName } from './services/polkadotService'
 
 // Cargar variables de entorno desde el directorio backend
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
@@ -102,6 +104,7 @@ import onboardingRoutes from './routes/onboardingRoutes'
 import uploadRoutes from './routes/uploadRoutes'
 import polkadotRoutes from './routes/polkadotRoutes'
 import emergencyRoutes from './routes/emergencyRoutes'
+import emergencyBlockchainRoutes from './routes/emergencyBlockchainRoutes'
 import systemConfigRoutes from './routes/systemConfigRoutes'
 app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
@@ -122,6 +125,8 @@ app.use('/api/polkadot', polkadotRoutes)
 app.use('/api/people-chain', polkadotRoutes)
 // Rutas de Emergencias
 app.use('/api/emergencies', emergencyRoutes)
+// Rutas para leer eventos de emergencia desde blockchain (solo autoridades)
+app.use('/api/emergency-blockchain', emergencyBlockchainRoutes)
 // app.use('/api/users', userRoutes)
 // app.use('/api/whatsapp', whatsappRoutes)
 
@@ -144,15 +149,35 @@ initializeStorage(5, 2000).then(() => {
 })
 
 // Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 Servidor corriendo en http://0.0.0.0:${PORT}`)
   console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`)
   console.log(`🌐 Accesible desde: http://localhost:${PORT} y http://[IP]:${PORT}`)
+
+  // Iniciar listener de emergencias desde blockchain
+  try {
+    const chain = (process.env.POLKADOT_CHAIN || 'PASET_HUB') as ChainName
+    const emergencyBlockchainService = getEmergencyBlockchainService(chain)
+    await emergencyBlockchainService.start()
+    console.log(`✅ Listener de emergencias blockchain iniciado en ${chain}`)
+  } catch (error: any) {
+    console.error('❌ Error iniciando listener de emergencias blockchain:', error)
+    // No detener el servidor si falla el listener
+  }
 })
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM recibido, cerrando servidor...')
+  
+  // Detener listener de emergencias
+  try {
+    const emergencyBlockchainService = getEmergencyBlockchainService()
+    emergencyBlockchainService.stop()
+  } catch (error) {
+    console.error('Error deteniendo listener de emergencias:', error)
+  }
+  
   await prisma.$disconnect()
   process.exit(0)
 })
